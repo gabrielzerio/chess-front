@@ -19,8 +19,8 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
     pawn: { white: "♙", black: "♟" },
 };
 
-const HTTP_API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:3001";
-const WS_API_URL =  import.meta.env.VITE_WS_API_URL || "ws://localhost:3001";
+const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
+const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
 
 const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
@@ -83,7 +83,7 @@ export const ChessGame: React.FC = () => {
   // Tutorial
   const [tutorialPiece, setTutorialPiece] = useState<PieceType | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
-  // const [gameIds, setGameIds] = useState<string[]>([]);
+  const [gameIds, setGameIds] = useState<string[]>([]);
   // refs para posicionamento do modal de promoção
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
     Array(8).fill(null).map(() => Array(8).fill(null))
@@ -103,12 +103,14 @@ export const ChessGame: React.FC = () => {
   
 
   // Exemplo de inicialização do board (adicione sua lógica real)
-  // useEffect( () => {
-
-  //     const ids = await getGameIds();
-  //     setGameIds(ids);
-    
-  // }, []);
+  useEffect( () => {
+    const ids = async () =>{
+      const ids = await getGameIds();
+      setGameIds(ids);
+    }
+    ids();
+    console.log("IDs de jogos disponíveis:", ids());
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -131,11 +133,23 @@ export const ChessGame: React.FC = () => {
     s.on("moveError", ({ message }) => {
       alert(message);
     });
+    s.on("gameOver", ({ winner }) => {
+      console.log("recebi gameOver sim", winner);
+      setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
+    })
     setSocket(s);
     return () => {
       s.disconnect();
     };
   }, [gameId, player1, createPlayerName, joinPlayerName]);
+
+
+  // useEffect(() => {
+  //   const s = io(`${WS_API_URL}`);
+  //   s.on("gameOver", ({ winner }) => {
+  //     setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
+  //   })
+  // },[gameId, player1]);
 
   // Buscar o board inicial do back-end quando gameId mudar
   useEffect(() => {
@@ -148,11 +162,7 @@ export const ChessGame: React.FC = () => {
       });
   }, [gameId]);
 
-useEffect(() => {
-  console.log("Highlights atualizados:", highlights);
-  console.log("Capture highlights atualizados:", captureHighlights);
-}, [highlights, captureHighlights]);
-
+  
   // Utilitário: remove destaques
   const removeHighlight = () => {
     setHighlights([]);
@@ -232,11 +242,6 @@ useEffect(() => {
     });
   };
 
-  // Modal de fim de jogo
-  const showEndGame = (winnerColor: PieceColor) => {
-    setEndGameModal({ open: true, winner: winnerColor === "white" ? player1 : player2 });
-  };
-
   // Modal de nomes dos jogadores
   const handleStartGame = () => {
     setPlayerNamesModal(false);
@@ -260,9 +265,9 @@ useEffect(() => {
   const handleRestart = () => {
     setEndGameModal({ open: false });
     // setBoard(...);
-    // setDeadPieces({ white: [], black: [] });
-    // setTurn("white");
-    // setMoveInfo("Clique em uma peça para mover");
+    setDeadPieces({ white: [], black: [] });
+    setTurn("white");
+    setMoveInfo("Clique em uma peça para mover");
   };
 
   // Novo: fluxo para criar jogo
@@ -319,17 +324,21 @@ useEffect(() => {
             </div>
             <div className="w-full border-t border-gray-300 pt-4">
                 <h3 className="font-bold mb-2">Entrar em jogo existente</h3>
+                <select
+                  className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
+                  value={joinGameId}
+                  onChange={e => setJoinGameId(e.target.value)}
+                >
+                  <option value="" disabled>Selecione um jogo</option>
+                  {gameIds.map(id => (
+                  <option key={id} value={id}>{id}</option>
+                  ))}
+                </select>
                 <input
-                className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-                value={joinGameId}
-                onChange={e => setJoinGameId(e.target.value)}
-                placeholder="ID do jogo"
-                  />
-                <input
-                className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-                value={joinPlayerName}
-                onChange={e => setJoinPlayerName(e.target.value)}
-                placeholder="Seu nome"
+                  className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
+                  value={joinPlayerName}
+                  onChange={e => setJoinPlayerName(e.target.value)}
+                  placeholder="Seu nome"
                 />
               <button
                 className="bg-blue-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-900 w-full"
