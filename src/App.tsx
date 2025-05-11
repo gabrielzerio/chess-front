@@ -19,12 +19,13 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
     pawn: { white: "♙", black: "♟" },
 };
 
+const API_URL = process.env.API_URL || "http://localhost:3001";
 const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
   .map(() => Array(8).fill(null));
 
 async function createGame() {
-  const response = await fetch('http://localhost:3001/games', {
+  const response = await fetch(`${API_URL}/games`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
   });
@@ -33,7 +34,7 @@ async function createGame() {
 }
 
 async function joinGame(gameId: string, playerName: string) {
-  const response = await fetch(`http://localhost:3001/games/${gameId}/join`, {
+  const response = await fetch(`${API_URL}/games/${gameId}/join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerName })
@@ -96,7 +97,7 @@ export const ChessGame: React.FC = () => {
     if (!gameId) return;
     // Corrige: envia também o nome do jogador ao entrar na sala
     const playerName = player1 || createPlayerName || joinPlayerName;
-    const s = io("ws://localhost:3001");
+    const s = io(`ws:${API_URL}`);
     s.on("connect", () => {
       s.emit("join", { gameId, playerName });
     });
@@ -122,7 +123,7 @@ export const ChessGame: React.FC = () => {
   // Buscar o board inicial do back-end quando gameId mudar
   useEffect(() => {
     if (!gameId) return;
-    fetch(`http://localhost:3001/games/${gameId}/board`)
+    fetch(`${API_URL}/games/${gameId}/board`)
       .then(res => res.json())
       .then(data => {
         setBoard(data.board);
@@ -172,7 +173,7 @@ useEffect(() => {
       setSelected({ row, col });
       // NOVO: buscar movimentos possíveis do back-end
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-        const response = await fetch(`http://localhost:3001/games/${gameId}/moves`, {
+        const response = await fetch(`${API_URL}/games/${gameId}/moves`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ from: { row, col } })
