@@ -19,8 +19,9 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
     pawn: { white: "♙", black: "♟" },
 };
 
-const HTTP_API_URL = "http://localhost:3001";
-const WS_API_URL = "ws://localhost:3001";
+const HTTP_API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:3001";
+const WS_API_URL =  import.meta.env.VITE_WS_API_URL || "ws://localhost:3001";
+
 const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
   .map(() => Array(8).fill(null));
@@ -32,6 +33,16 @@ async function createGame() {
   });
   const data = await response.json();
   return data.gameId;
+}
+
+
+async function getGameIds():Promise<string[]> {
+  const response = await fetch(`${HTTP_API_URL}/games`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const data = await response.json();
+  return data.gameIds;
 }
 
 async function joinGame(gameId: string, playerName: string) {
@@ -72,7 +83,7 @@ export const ChessGame: React.FC = () => {
   // Tutorial
   const [tutorialPiece, setTutorialPiece] = useState<PieceType | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
-
+  // const [gameIds, setGameIds] = useState<string[]>([]);
   // refs para posicionamento do modal de promoção
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
     Array(8).fill(null).map(() => Array(8).fill(null))
@@ -89,10 +100,15 @@ export const ChessGame: React.FC = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [playerNamesModal, tutorialModal, promotionModal.open, endGameModal.open]);
 
+  
+
   // Exemplo de inicialização do board (adicione sua lógica real)
-  useEffect(() => {
-    // setBoard(...);
-  }, []);
+  // useEffect( () => {
+
+  //     const ids = await getGameIds();
+  //     setGameIds(ids);
+    
+  // }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -302,19 +318,19 @@ useEffect(() => {
               </button>
             </div>
             <div className="w-full border-t border-gray-300 pt-4">
-              <h3 className="font-bold mb-2">Entrar em jogo existente</h3>
-              <input
+                <h3 className="font-bold mb-2">Entrar em jogo existente</h3>
+                <input
                 className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
                 value={joinGameId}
                 onChange={e => setJoinGameId(e.target.value)}
                 placeholder="ID do jogo"
-              />
-              <input
+                  />
+                <input
                 className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
                 value={joinPlayerName}
                 onChange={e => setJoinPlayerName(e.target.value)}
                 placeholder="Seu nome"
-              />
+                />
               <button
                 className="bg-blue-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-900 w-full"
                 onClick={handleJoinGame}
