@@ -2,14 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import ModalInicio from "./Modal";
 
-type PieceColor = "white" | "black";
-type PieceType = "rook" | "knight" | "bishop" | "queen" | "king" | "pawn";
-interface Position { row: number; col: number; }
-interface Piece {
-  type: PieceType;
-  color: PieceColor;
-  position: Position;
-}
+import type { PieceColor, PieceType, Position, Piece} from "./types/types";
+import { DeadPieces } from "./DeadPieces";
 
 const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
   rook: { white: "♖", black: "♜" },
@@ -51,6 +45,14 @@ async function joinGame(gameId: string, playerName: string) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerName })
+  });
+  return await response.json();
+}
+
+async function deleteGame(gameId: string) {
+  const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' }
   });
   return await response.json();
 }
@@ -101,7 +103,7 @@ export const ChessGame: React.FC = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [playerNamesModal, tutorialModal, promotionModal.open, endGameModal.open]);
 
-  
+
 
   // Exemplo de inicialização do board (adicione sua lógica real)
   useEffect( () => {
@@ -145,23 +147,46 @@ export const ChessGame: React.FC = () => {
   }, [gameId, player1, createPlayerName, joinPlayerName]);
 
 
-  // useEffect(() => {
-  //   const s = io(`${WS_API_URL}`);
-  //   s.on("gameOver", ({ winner }) => {
-  //     setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
-  //   })
-  // },[gameId, player1]);
+  useEffect(() => {
+    if(!endGameModal.open) return;
+    const audio = new Audio("/sounds/gameover.mp3");
+    audio.play();
+  }, [endGameModal])
+
+  //Efeito para buscar o gameId e playerName do localStorage quando recarregar a página
+  useEffect(() => {
+    const playerName:string|null = localStorage.getItem("playerName");
+    const gameId:string|null = localStorage.getItem("gameId");
+    if (playerName && gameId) {
+    setGameId(gameId);
+    setJoinGameId(gameId);
+    setCreatePlayerName(playerName);
+    setJoinPlayerName(playerName);
+    setJoinOrCreateModal(false);
+    // Opcional: você pode chamar joinGame(gameId, playerName) aqui se necessário
+  }
+  }, [])
 
   // Buscar o board inicial do back-end quando gameId mudar
-  useEffect(() => {
-    if (!gameId) return;
-    fetch(`${HTTP_API_URL}/games/${gameId}/board`)
-      .then(res => res.json())
-      .then(data => {
-        setBoard(data.board);
-        setTurn(data.turn);
-      });
-  }, [gameId]);
+useEffect(() => {
+  if (!gameId) return;
+  fetch(`${HTTP_API_URL}/games/${gameId}/board`)
+    .then((res) => {
+      if (!res.ok) {
+        localStorage.removeItem("gameId");
+        localStorage.removeItem("playerName");
+        throw new Error("Erro ao buscar o tabuleiro");
+      }
+      return res.json();
+    })
+    .then(data => {
+      setBoard(data.board);
+      setTurn(data.turn);
+    })
+    .catch(err => {
+      console.error(err);
+    });
+}, [gameId]);
 
   
   // Utilitário: remove destaques
@@ -265,10 +290,12 @@ export const ChessGame: React.FC = () => {
   // Modal de reinício
   const handleRestart = () => {
     setEndGameModal({ open: false });
-    // setBoard(...);
+     localStorage.removeItem("gameId");
+    localStorage.removeItem("playerName");
     setDeadPieces({ white: [], black: [] });
     setTurn("white");
-    setMoveInfo("Clique em uma peça para mover");
+    deleteGame(gameId!);
+    window.location.reload();
   };
 
   // Novo: fluxo para criar jogo
@@ -281,7 +308,8 @@ export const ChessGame: React.FC = () => {
     setPlayerNamesModal(false);
     setJoinOrCreateModal(false);
     setMoveInfo(`Aguardando outro jogador entrar... (ID: ${id})`);
-    // Aqui você pode aguardar o segundo jogador via websocket depois
+    localStorage.setItem("gameId", id);
+    localStorage.setItem("playerName", createPlayerName)
   };
 
   // Novo: fluxo para entrar em jogo existente
@@ -294,7 +322,8 @@ export const ChessGame: React.FC = () => {
       setPlayerNamesModal(false);
       setJoinOrCreateModal(false);
       setMoveInfo(`Entrou no jogo ${joinGameId}`);
-      // Aqui você pode buscar o estado do jogo e conectar websocket
+      localStorage.setItem("gameId", joinGameId);
+      localStorage.setItem("playerName", joinPlayerName);
     } else {
       setMoveInfo("Erro ao entrar no jogo.");
     }
@@ -303,90 +332,31 @@ export const ChessGame: React.FC = () => {
   // Render
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
-<ModalInicio
-  joinOrCreateModal={joinOrCreateModal}
-  createPlayerName={createPlayerName}
-  setCreatePlayerName={setCreatePlayerName}
-  handleCreateGame={handleCreateGame}
-  joinGameId={joinGameId}
-  setJoinGameId={setJoinGameId}
-  gameIds={gameIds}
-  joinPlayerName={joinPlayerName}
-  setJoinPlayerName={setJoinPlayerName}
-  handleJoinGame={handleJoinGame}
-/>
-// ...existing code...{/* Modal inicial: criar ou entrar em jogo */}
-      {/* {joinOrCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-6 items-center min-w-[350px]">
-            <h2 className="font-serif text-xl font-bold mb-2">Bem-vindo ao Xadrez Online</h2>
-            <div className="w-full">
-              <h3 className="font-bold mb-2">Criar novo jogo</h3>
-              <input
-                className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-                value={createPlayerName}
-                onChange={e => setCreatePlayerName(e.target.value)}
-                placeholder="Seu nome"
-              />
-              <button
-                className="bg-green-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-900 w-full"
-                onClick={handleCreateGame}
-              >
-                Criar Jogo
-              </button>
-            </div>
-            <div className="w-full border-t border-gray-300 pt-4">
-                <h3 className="font-bold mb-2">Entrar em jogo existente</h3>
-                <select
-                  className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-                  value={joinGameId}
-                  onChange={e => setJoinGameId(e.target.value)}
-                >
-                  <option value="" disabled>Selecione um jogo</option>
-                  {gameIds.map(id => (
-                  <option key={id} value={id}>{id}</option>
-                  ))}
-                </select>
-                <input
-                  className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-                  value={joinPlayerName}
-                  onChange={e => setJoinPlayerName(e.target.value)}
-                  placeholder="Seu nome"
-                />
-              <button
-                className="bg-blue-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-900 w-full"
-                onClick={handleJoinGame}
-              >
-                Entrar no Jogo
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
-
+      
+      <ModalInicio
+        joinOrCreateModal={joinOrCreateModal}
+        createPlayerName={createPlayerName}
+        setCreatePlayerName={setCreatePlayerName}
+        handleCreateGame={handleCreateGame}
+        joinGameId={joinGameId}
+        setJoinGameId={setJoinGameId}
+        gameIds={gameIds}
+        joinPlayerName={joinPlayerName}
+        setJoinPlayerName={setJoinPlayerName}
+        handleJoinGame={handleJoinGame}
+    />
       <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
-        {/* Dead Pieces */}
-        <div className="dead-pieces flex flex-col justify-between p-5 h-[500px] w-[200px] rounded-lg text-4xl bg-neutral-600 self-center md:justify-self-end">
-          <div id="black-pieces" className="flex flex-wrap">
-            {deadPieces.black.map((p, i) => (
-              <span key={i}>{pieceSymbols[p.type][p.color]}</span>
-            ))}
-          </div>
-          <div id="white-pieces" className="flex flex-wrap">
-            {deadPieces.white.map((p, i) => (
-              <span key={i}>{pieceSymbols[p.type][p.color]}</span>
-            ))}
-          </div>
-        </div>
+        <DeadPieces 
+          deadPieces={deadPieces}
+          pieceSymbols={pieceSymbols}
+          endGameModal={endGameModal}
+        />
 
         {/* Chess Board & Info */}
-        <div className="chess-container flex flex-col gap-5 w-fit">
+        <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
           <div id="turn-info" className="bg-yellow-100 p-5 text-lg text-center rounded-lg">
-            {playerColor
-              ? (turn === playerColor
-                  ? "Sua vez"
-                  : "Aguardando adversário")
-              : `Turno: ${turn === "white" ? player1 || "Jogador Branco" : player2 || "Jogador Preto"}`}
+            {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
+             : `Turno: ${turn === "white" ? player1 || "Jogador Branco" : player2 || "Jogador Preto"}`}
           </div>
           <div>
             <div id="board-wrapper" className="flex items-center">
@@ -402,19 +372,11 @@ export const ChessGame: React.FC = () => {
                     const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
                     
                     return (
-                      <div
-                        key={`${row}-${col}`}
-                        id={`${row}-${col}`}
-                        ref={el => {
-                          boardRefs.current[row][col] = el;
-                        }}
+                      <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el;}}
                         className={`
-                          w-[100px] h-[100px] flex items-center justify-center relative
-                          ${(row + col) % 2 === 0 ? "bg-yellow-100" : "bg-yellow-700"}
-                          cursor-pointer
+                          w-[100px] h-[100px] flex items-center justify-center relative ${(row + col) % 2 === 0 ? "bg-yellow-100" : "bg-yellow-700"} cursor-pointer
                           ${isHighlight ? "!bg-green-500" : ""}
-                          ${isCapture ? "!bg-red-500" : ""}
-                        `}
+                          ${isCapture ? "!bg-red-500" : ""}`}
                         onClick={() => handleSquareClick(row, col)}
                       >
                         <span className="piece absolute text-4xl select-none pointer-events-none">
@@ -426,9 +388,9 @@ export const ChessGame: React.FC = () => {
                 )}
               </div>
               {/* Y Coordinates */}
-              <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 text-center items-center">
+              <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 text-center">
                 {[8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                  <div key={n}>{n}</div>
+                  <div key={n} className="h-[100px] flex items-center justify-center">{n}</div>
                 ))}
               </div>
             </div>
@@ -438,6 +400,7 @@ export const ChessGame: React.FC = () => {
                 <div key={l}>{l}</div>
               ))}
             </div>
+            
             {/* Info Panel */}
             <div className="info-panel text-center mt-2">
               <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
@@ -478,15 +441,14 @@ export const ChessGame: React.FC = () => {
 
         {/* End Game Modal */}
         {endGameModal.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 flex items-center justify-center z-50">
             <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-4 items-center">
               <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
               <p id="winnerMessage">{endGameModal.winner}</p>
-              <button
+               <button
                 className="bg-neutral-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900"
-                onClick={handleRestart}
-              >
-                Jogar Novamente
+                onClick={handleRestart}>
+                Encerrar
               </button>
             </div>
           </div>
