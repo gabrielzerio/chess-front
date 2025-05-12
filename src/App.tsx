@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
+import ModalInicio from "./Modal";
 
 type PieceColor = "white" | "black";
 type PieceType = "rook" | "knight" | "bishop" | "queen" | "king" | "pawn";
@@ -243,10 +244,10 @@ export const ChessGame: React.FC = () => {
   };
 
   // Modal de nomes dos jogadores
-  const handleStartGame = () => {
-    setPlayerNamesModal(false);
-    setMoveInfo(`Vez de ${turn === "white" ? player1 : player2}`);
-  };
+  // const handleStartGame = () => {
+  //   setPlayerNamesModal(false);
+  //   setMoveInfo(`Vez de ${turn === "white" ? player1 : player2}`);
+  // };
 
   // Modal de tutorial
   const handleTutorialSelect = (type: PieceType) => {
@@ -302,8 +303,20 @@ export const ChessGame: React.FC = () => {
   // Render
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
-      {/* Modal inicial: criar ou entrar em jogo */}
-      {joinOrCreateModal && (
+<ModalInicio
+  joinOrCreateModal={joinOrCreateModal}
+  createPlayerName={createPlayerName}
+  setCreatePlayerName={setCreatePlayerName}
+  handleCreateGame={handleCreateGame}
+  joinGameId={joinGameId}
+  setJoinGameId={setJoinGameId}
+  gameIds={gameIds}
+  joinPlayerName={joinPlayerName}
+  setJoinPlayerName={setJoinPlayerName}
+  handleJoinGame={handleJoinGame}
+/>
+// ...existing code...{/* Modal inicial: criar ou entrar em jogo */}
+      {/* {joinOrCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-6 items-center min-w-[350px]">
             <h2 className="font-serif text-xl font-bold mb-2">Bem-vindo ao Xadrez Online</h2>
@@ -349,7 +362,7 @@ export const ChessGame: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
         {/* Dead Pieces */}
@@ -479,7 +492,7 @@ export const ChessGame: React.FC = () => {
           </div>
         )}
 
-        {/* Player Names Modal */}
+        {/* Player Names Modal
         {playerNamesModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-4 items-center">
@@ -504,7 +517,7 @@ export const ChessGame: React.FC = () => {
               </button>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Tutorial Modal */}
         {tutorialModal && (
