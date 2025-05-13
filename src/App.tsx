@@ -2,8 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import ModalInicio from "./Modal";
 
-import type { PieceColor, PieceType, Position, Piece} from "./types/types";
+import type { PieceColor, PieceType, Position, Piece, Board} from "./types/types";
 import { DeadPieces } from "./DeadPieces";
+
+interface BoardEID{
+  board:(Piece | null)[][];
+  turn:PieceColor;
+}
 
 const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
   rook: { white: "♖", black: "♜" },
@@ -54,6 +59,23 @@ async function deleteGame(gameId: string) {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' }
   });
+  return await response.json();
+}
+
+async function getBoard(gameId: string): Promise<BoardEID> { //modifiquei a função para retornar erro se os dados recebidos forem invalidos
+  const response = await fetch(`${HTTP_API_URL}/games/${gameId}/board`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Jogo não encontrado (404)");
+    } else {
+      throw new Error(`Erro ao buscar tabuleiro: ${response.status}`);
+    }
+  }
+
   return await response.json();
 }
 
@@ -120,6 +142,7 @@ export const ChessGame: React.FC = () => {
     // Corrige: envia também o nome do jogador ao entrar na sala
     const playerName = player1 || createPlayerName || joinPlayerName;
     const s = io(`${WS_API_URL}`);
+    console.log(WS_API_URL)
     s.on("connect", () => {
       s.emit("join", { gameId, playerName });
     });
@@ -153,39 +176,42 @@ export const ChessGame: React.FC = () => {
     audio.play();
   }, [endGameModal])
 
-  //Efeito para buscar o gameId e playerName do localStorage quando recarregar a página
-  useEffect(() => {
-    const playerName:string|null = localStorage.getItem("playerName");
-    const gameId:string|null = localStorage.getItem("gameId");
-    if (playerName && gameId) {
-    setGameId(gameId);
-    setJoinGameId(gameId);
-    setCreatePlayerName(playerName);
-    setJoinPlayerName(playerName);
-    setJoinOrCreateModal(false);
-    // Opcional: você pode chamar joinGame(gameId, playerName) aqui se necessário
-  }
-  }, [])
-
-  // Buscar o board inicial do back-end quando gameId mudar
-useEffect(() => {
-  if (!gameId) return;
-  fetch(`${HTTP_API_URL}/games/${gameId}/board`)
-    .then((res) => {
-      if (!res.ok) {
-        localStorage.removeItem("gameId");
-        localStorage.removeItem("playerName");
-        throw new Error("Erro ao buscar o tabuleiro");
+  
+ useEffect(() => {
+  const playerName: string | null = localStorage.getItem("playerName");
+  const gameId: string | null = localStorage.getItem("gameId");
+      //verifico se os dados salvos no localstorage(LS) são validos no servidor, se não forem os sets não prosseguem e os dados são removidos do LS
+  const fetchData = async () => {
+    try {
+      if (gameId) {
+        await getBoard(gameId);
       }
-      return res.json();
-    })
-    .then(data => {
-      setBoard(data.board);
-      setTurn(data.turn);
-    })
-    .catch(err => {
-      console.error(err);
-    });
+      if (playerName && gameId) {
+        setGameId(gameId);
+        setJoinGameId(gameId);
+        setCreatePlayerName(playerName);
+        setJoinPlayerName(playerName);
+        setJoinOrCreateModal(false);
+      }
+    } catch (error) {
+      localStorage.removeItem("playerName");
+      localStorage.removeItem("gameId");
+    }
+  };
+
+  fetchData();
+}, []);
+
+  // Buscar o board inicial e turno do back-end quando gameId mudar
+useEffect(() => {
+  const recebeBoardEID = async() =>{
+    if(gameId){
+      const boardTeste:BoardEID = await getBoard(gameId);
+      setBoard(boardTeste.board);
+      setTurn(boardTeste.turn);
+    }
+  }
+  recebeBoardEID();
 }, [gameId]);
 
   

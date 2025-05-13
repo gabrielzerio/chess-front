@@ -6,3 +6,4 @@ export interface Piece {
   color: PieceColor;
   position: Position;
 }
+export type Board = (Piece | null)[][];
