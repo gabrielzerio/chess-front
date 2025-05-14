@@ -3,18 +3,17 @@
 // import type { UserContextType } from "./types/ContextType";
 interface ModalInicioProps {
   joinOrCreateModal: boolean;
-  createPlayerName: string;
-  setCreatePlayerName: (name: string) => void;
+  inputPlayerName: string;
+  setInputPlayerName: (name: string) => void;
   handleCreateGame: () => void;
-  joinGameId: string;
-  setJoinGameId: (id: string) => void;
-  gameIds: string[];
-  joinPlayerName: string;
-  setJoinPlayerName: (name: string) => void;
+  inputGameId: string;
+  setInputGameId: (id: string) => void;
+  JoinInputPlayerName: string;
+  setJoinInputPlayerName: (name: string) => void;
   handleJoinGame: () => void;
 }
 
-function ModalInicio({ joinOrCreateModal, createPlayerName, setCreatePlayerName, handleCreateGame, joinGameId, setJoinGameId, gameIds, joinPlayerName, setJoinPlayerName, handleJoinGame }: ModalInicioProps) {
+function ModalInicio({ joinOrCreateModal, inputPlayerName, setInputPlayerName, handleCreateGame, inputGameId, setInputGameId, JoinInputPlayerName, setJoinInputPlayerName, handleJoinGame }: ModalInicioProps) {
   // const {joinOrCreateModal,  } = useUser();
 
   return (
@@ -26,8 +25,8 @@ function ModalInicio({ joinOrCreateModal, createPlayerName, setCreatePlayerName,
             <h3 className="font-bold mb-2">Criar novo jogo</h3>
             <input
               className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-              value={createPlayerName}
-              onChange={e => setCreatePlayerName(e.target.value)}
+              value={inputPlayerName}
+              onChange={e => setInputPlayerName(e.target.value)}
               placeholder="Seu nome"
             />
             <button
@@ -39,20 +38,16 @@ function ModalInicio({ joinOrCreateModal, createPlayerName, setCreatePlayerName,
           </div>
           <div className="w-full border-t border-gray-300 pt-4">
             <h3 className="font-bold mb-2">Entrar em jogo existente</h3>
-            <select
-              className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-              value={joinGameId}
-              onChange={e => setJoinGameId(e.target.value)}
-            >
-              <option value="" disabled>Selecione um jogo</option>
-              {gameIds.map((id: string) => (
-                <option key={id} value={id}>{id}</option>
-              ))}
-            </select>
             <input
               className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
-              value={joinPlayerName}
-              onChange={e => setJoinPlayerName(e.target.value)}
+              value={inputGameId}
+              onChange={e => setInputGameId(e.target.value)}
+            >
+            </input>
+            <input
+              className="border-2 border-neutral-800 rounded px-4 py-2 mb-2 w-full"
+              value={JoinInputPlayerName}
+              onChange={e => setJoinInputPlayerName(e.target.value)}
               placeholder="Seu nome"
             />
             <button
