@@ -8,7 +8,7 @@ interface CompDeadPiecesProps {
 
 export function DeadPieces({deadPieces, pieceSymbols, endGameModal}: CompDeadPiecesProps) {
   return (
-         <div className={`dead-pieces flex flex-col justify-between p-5 h-[500px] w-[200px] rounded-lg text-4xl bg-neutral-600 self-center md:justify-self-end ${endGameModal.open ? "blur-sm" : ""}`}>
+         <div className={`dead-pieces flex flex-col justify-between p-5 h-[500px] w-[200px] rounded-lg text-4xl bg-neutral-600 md:justify-self-end ${endGameModal.open ? "blur-sm" : ""}`}>
           <div id="black-pieces" className="flex flex-wrap">
             {deadPieces.black.map((p, i) => (
               <span key={i}>{pieceSymbols[p.type][p.color]}</span>

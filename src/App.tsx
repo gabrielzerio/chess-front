@@ -71,6 +71,7 @@ async function getGameExists(gameId: string, playerName: string): Promise<boolea
 }
 
 export const ChessGame: React.FC = () => {
+    const [darkMode, setDarkMode] = useState(true);
   // Estados principais
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
   const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
@@ -174,6 +175,16 @@ export const ChessGame: React.FC = () => {
 }
 fetchValidGame();
 }, [effect]);
+
+
+useEffect(() => {
+  const root = window.document.documentElement;
+  if (darkMode) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+}, [darkMode]);
 
 // 4. Tocar som de game over
 useEffect(() => {
@@ -287,6 +298,11 @@ useEffect(() => {
       setJoinOrCreateModal(true);
      }
   };
+  const cleanStates = () => {
+    setInputPlayerName("");
+    setInputGameId("");
+    setJoinInputPlayerName("");
+  }
 
   // Novo: fluxo para criar jogo
   const handleCreateGame = async () => {
@@ -299,6 +315,7 @@ useEffect(() => {
     setMoveInfo(`Aguardando outro jogador entrar... (ID: ${id})`);
     localStorage.setItem("gameId", id);
     localStorage.setItem("playerName", playerName.current)
+    cleanStates();
     setEffect(!effect); // força o re-render
   };
 
@@ -316,6 +333,7 @@ useEffect(() => {
       // setMoveInfo(`Entrou no jogo ${joinGameId}`);
       localStorage.setItem("gameId", gameId.current);
       localStorage.setItem("playerName", playerName.current);
+      cleanStates();
       setEffect(!effect); // força o re-render
     } else {
       setMoveInfo("Erro ao entrar no jogo.");
@@ -323,137 +341,157 @@ useEffect(() => {
   };
 
   // Render
-  return (
-    <div className="min-h-screen bg-gray-100 font-sans">
-      
-      <ModalInicio
-        joinOrCreateModal={joinOrCreateModal}
-        inputPlayerName = {inputPlayerName}
-        setInputPlayerName = {setInputPlayerName}
-        handleCreateGame={handleCreateGame}
-        handleJoinGame={handleJoinGame}
-        inputGameId={inputGameId}
-        setInputGameId={setInputGameId}
-        JoinInputPlayerName={JoinInputPlayerName}
-        setJoinInputPlayerName={setJoinInputPlayerName}
+// Render
+return (
+  <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100 ">
+    <button
+     onClick={() => setDarkMode(!darkMode)}
+  className="absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
+    bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white"
+>
+  {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
+</button>
+
+    <ModalInicio
+      joinOrCreateModal={joinOrCreateModal}
+      inputPlayerName={inputPlayerName}
+      setInputPlayerName={setInputPlayerName}
+      handleCreateGame={handleCreateGame}
+      handleJoinGame={handleJoinGame}
+      inputGameId={inputGameId}
+      setInputGameId={setInputGameId}
+      JoinInputPlayerName={JoinInputPlayerName}
+      setJoinInputPlayerName={setJoinInputPlayerName}
     />
-      <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
+
+    <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
+      
+      <div className="flex flex-col justify-between items-end h-3/4">
+        <div className="bg-amber-300 dark:bg-yellow-800 text-center rounded-lg px-4 py-2 font-semibold shadow-md border border-yellow-700 dark:border-yellow-600">
+          ID do jogo: {gameId.current}
+        </div>
         <DeadPieces 
           deadPieces={deadPieces}
           pieceSymbols={pieceSymbols}
           endGameModal={endGameModal}
         />
+        
+      </div>
 
-        {/* Chess Board & Info */}
-        <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-          <div className="flex flex-row w-800px items-center bg-yellow-100">
-              <div id="turn-info" className=" p-5 text-lg text-center rounded-lg grow">
-              {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
-              : `Turno: ${turn === "white" ? playerName.current || "Jogador Branco" : playerName.current || "Jogador Preto"}`}
+      {/* Chess Board & Info */}
+      <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
+        <div className="flex flex-row w-800px items-center bg-yellow-200 dark:bg-yellow-900 shadow-lg rounded-xl px-4 py-2 border border-yellow-600 dark:border-yellow-700">
+          <div id="turn-info" className="p-5 text-lg text-center rounded-lg grow font-medium">
+            {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
+            : `Turno: ${turn === "white" ? playerName.current || "Jogador Branco" : playerName.current || "Jogador Preto"}`}
           </div>
-             <button 
-             onClick={() => handleRestart('leave')}
-             className="bg-red-500 cursor-pointer h-10 rounded-lg">SAIR DO JOGO</button>
-               
-          </div>
-          <div>
-            <div id="board-wrapper" className="flex items-center">
-              {/* Board */}
-              <div
-                id="board"
-                className="grid grid-cols-8 grid-rows-8 border-4 border-neutral-800 relative"
-                style={{ width: 800, height: 800 }}
-              >
-                {board.map((rowArr, row) =>
-                  rowArr.map((piece, col) => {
-                    const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
-                    const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-                    
-                    return (
-                      <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el;}}
-                        className={`
-                          w-[100px] h-[100px] flex items-center justify-center relative ${(row + col) % 2 === 0 ? "bg-yellow-100" : "bg-yellow-700"} cursor-pointer
-                          ${isHighlight ? "!bg-green-500" : ""}
-                          ${isCapture ? "!bg-red-500" : ""}`}
-                        onClick={() => handleSquareClick(row, col)}
-                      >
-                        <span className="piece absolute text-4xl select-none pointer-events-none">
-                          {piece ? pieceSymbols[piece.type][piece.color] : ""}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {/* Y Coordinates */}
-              <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 text-center">
-                {[8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                  <div key={n} className="h-[100px] flex items-center justify-center">{n}</div>
-                ))}
-              </div>
+          <button 
+            onClick={() => handleRestart('leave')}
+            className="bg-red-600 hover:bg-red-700 text-white h-10 px-4 ml-4 rounded-lg font-bold shadow-md transition">
+            SAIR DO JOGO
+          </button>
+        </div>
+
+        <div>
+          <div id="board-wrapper" className="flex items-center">
+            {/* Board */}
+            <div
+              id="board"
+              className="grid grid-cols-8 grid-rows-8 border-4 border-neutral-800 dark:border-neutral-200 relative"
+              style={{ width: 800, height: 800 }}
+            >
+              {board.map((rowArr, row) =>
+                rowArr.map((piece, col) => {
+                  const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
+                  const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
+                  
+                  return (
+                    <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el; }}
+                      className={`
+                        w-[100px] h-[100px] flex items-center justify-center relative 
+                        ${(row + col) % 2 === 0 ? "bg-yellow-100 dark:bg-yellow-800" : "bg-yellow-700 dark:bg-yellow-600"} 
+                        cursor-pointer transition
+                        ${isHighlight ? "!bg-green-500 dark:!bg-green-700" : ""}
+                        ${isCapture ? "!bg-red-500 dark:!bg-red-700" : ""}`}
+                      onClick={() => handleSquareClick(row, col)}
+                    >
+                      <span className="piece absolute text-4xl select-none pointer-events-none">
+                        {piece ? pieceSymbols[piece.type][piece.color] : ""}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
-            {/* X Coordinates */}
-            <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 text-center">
-              {["A", "B", "C", "D", "E", "F", "G", "H"].map((l) => (
-                <div key={l}>{l}</div>
+            {/* Y Coordinates */}
+            <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
+              {[8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
+                <div key={n} className="h-[100px] flex items-center justify-center">{n}</div>
               ))}
             </div>
-            
-            {/* Info Panel */}
-            <div className="info-panel text-center mt-2">
-              <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
+          </div>
+          {/* X Coordinates */}
+          <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
+            {["A", "B", "C", "D", "E", "F", "G", "H"].map((l) => (
+              <div key={l}>{l}</div>
+            ))}
+          </div>
+
+          {/* Info Panel */}
+          <div className="info-panel text-center mt-2">
+            <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {promotionModal.open && (
+        <div
+          className="fixed z-50"
+          style={{
+            left: promotionModal.squareRect?.left,
+            top: promotionModal.color === "white"
+              ? (promotionModal.squareRect?.top ?? 0) - 60
+              : (promotionModal.squareRect?.bottom ?? 0),
+            position: "absolute"
+          }}
+        >
+          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-700 dark:border-yellow-500 rounded-lg p-6 shadow-lg">
+            <h2 className="font-serif text-xl font-bold mb-4">Escolha uma peça para promoção</h2>
+            <div className="flex gap-4 justify-center">
+              {(["queen", "rook", "bishop", "knight"] as PieceType[]).map((type) => (
+                <button
+                  key={type}
+                  className="text-3xl w-12 h-12 p-1 cursor-pointer bg-yellow-100 dark:bg-yellow-800 border border-yellow-700 rounded hover:bg-yellow-700 hover:text-yellow-100 dark:hover:bg-yellow-500 dark:hover:text-neutral-900"
+                  onClick={() => handlePromotion(type)}
+                >
+                  {pieceSymbols[type][promotionModal.color!]}
+                </button>
+              ))}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Modals */}
-        {/* Promotion Modal */}
-        {promotionModal.open && (
-          <div
-            className="fixed z-50"
-            style={{
-              left: promotionModal.squareRect?.left,
-              top: promotionModal.color === "white"
-                ? (promotionModal.squareRect?.top ?? 0) - 60
-                : (promotionModal.squareRect?.bottom ?? 0),
-              position: "absolute"
-            }}
-          >
-            <div className="bg-yellow-100 border-2 border-yellow-700 rounded-lg p-6 shadow-lg">
-              <h2 className="font-serif text-xl font-bold mb-4">Escolha uma peça para promoção</h2>
-              <div className="flex gap-4 justify-center">
-                {(["queen", "rook", "bishop", "knight"] as PieceType[]).map((type) => (
-                  <button
-                    key={type}
-                    className="text-3xl w-12 h-12 p-1 cursor-pointer bg-yellow-100 border border-yellow-700 rounded hover:bg-yellow-700 hover:text-yellow-100"
-                    onClick={() => handlePromotion(type)}
-                  >
-                    {pieceSymbols[type][promotionModal.color!]}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* End Game Modal */}
+      {endGameModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
+            <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
+            <p id="winnerMessage">{endGameModal.winner}</p>
+            <button
+              className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
+              onClick={() => handleRestart(null)}
+            >
+              Encerrar
+            </button>
           </div>
-        )}
-
-        {/* End Game Modal */}
-        {endGameModal.open && (
-          <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-4 items-center">
-              <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-              <p id="winnerMessage">{endGameModal.winner}</p>
-               <button
-                className="bg-neutral-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900"
-                onClick={() => handleRestart(null)}>
-                Encerrar
-              </button>
-            </div>
-          </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
+
 };
 
 export default ChessGame;
