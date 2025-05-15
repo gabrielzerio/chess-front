@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import ModalInicio from "./Modal";
+import ModalInicio from "./components/modals/Modal";
 
 import type { PieceColor, PieceType, Position, Piece} from "./types/types";
-import { DeadPieces } from "./DeadPieces";
+import { DeadPieces } from "./components/game/DeadPieces";
+import { DivGameId } from "./components/game/GameId";
 
 
 interface JoinPayload  {
@@ -343,14 +344,12 @@ useEffect(() => {
   // Render
 // Render
 return (
-  <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100 ">
-    <button
-     onClick={() => setDarkMode(!darkMode)}
-  className="absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
-    bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white"
->
-  {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
-</button>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100 ">
+        <button onClick={() => setDarkMode(!darkMode)}
+          className="absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
+        bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
+        {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
+        </button>
 
     <ModalInicio
       joinOrCreateModal={joinOrCreateModal}
@@ -364,12 +363,10 @@ return (
       setJoinInputPlayerName={setJoinInputPlayerName}
     />
 
-    <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
+    <div className="grid gap-12 grid-cols-1 md:grid-cols-3" id="main-grid">
       
-      <div className="flex flex-col justify-between items-end h-3/4">
-        <div className="bg-amber-300 dark:bg-yellow-800 text-center rounded-lg px-4 py-2 font-semibold shadow-md border border-yellow-700 dark:border-yellow-600">
-          ID do jogo: {gameId.current}
-        </div>
+      <div className="hidden md:flex flex-col justify-between items-end h-3/4">
+        <DivGameId gameId={gameId} />
         <DeadPieces 
           deadPieces={deadPieces}
           pieceSymbols={pieceSymbols}
@@ -380,25 +377,25 @@ return (
 
       {/* Chess Board & Info */}
       <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-        <div className="flex flex-row w-800px items-center bg-yellow-200 dark:bg-yellow-900 shadow-lg rounded-xl px-4 py-2 border border-yellow-600 dark:border-yellow-700">
+        <div className="flex flex-row w-screen md:items-center bg-yellow-200 dark:bg-yellow-900 shadow-lg rounded-xl px-4 py-2 border border-yellow-600 dark:border-yellow-700">
           <div id="turn-info" className="p-5 text-lg text-center rounded-lg grow font-medium">
             {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
             : `Turno: ${turn === "white" ? playerName.current || "Jogador Branco" : playerName.current || "Jogador Preto"}`}
           </div>
           <button 
             onClick={() => handleRestart('leave')}
-            className="bg-red-600 hover:bg-red-700 text-white h-10 px-4 ml-4 rounded-lg font-bold shadow-md transition">
+            className="bg-red-600 hover:bg-red-700 text-white px-4 ml-4 rounded-lg font-bold shadow-md transition">
             SAIR DO JOGO
           </button>
         </div>
 
         <div>
-          <div id="board-wrapper" className="flex items-center">
+          <div id="board-wrapper" className="flex">
             {/* Board */}
             <div
               id="board"
-              className="grid grid-cols-8 grid-rows-8 border-4 border-neutral-800 dark:border-neutral-200 relative"
-              style={{ width: 800, height: 800 }}
+              className="grid grid-cols-[repeat(8,1fr)] grid-rows-[repeat(8,50px)] border-4 border-neutral-800 dark:border-neutral-200 w-screen h-3/4"
+              // style={{ width: 800, height: 800 }}
             >
               {board.map((rowArr, row) =>
                 rowArr.map((piece, col) => {
@@ -408,7 +405,7 @@ return (
                   return (
                     <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el; }}
                       className={`
-                        w-[100px] h-[100px] flex items-center justify-center relative 
+                         flex items-center justify-center relative 
                         ${(row + col) % 2 === 0 ? "bg-yellow-100 dark:bg-yellow-800" : "bg-yellow-700 dark:bg-yellow-600"} 
                         cursor-pointer transition
                         ${isHighlight ? "!bg-green-500 dark:!bg-green-700" : ""}

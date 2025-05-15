@@ -1,4 +1,4 @@
-import type { PieceColor, PieceType, Piece} from "./types/types";
+import type { PieceColor, PieceType, Piece} from "../../types/types";
 
 interface CompDeadPiecesProps {
     deadPieces:{white:Piece[]; black:Piece[]};
