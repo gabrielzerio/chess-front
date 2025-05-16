@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import ModalInicio from "./Modal";
+import ModalInicio from "./components/modals/Modal";
 
 import type { PieceColor, PieceType, Position, Piece} from "./types/types";
-import { DeadPieces } from "./DeadPieces";
+import { DeadPieces } from "./components/game/DeadPieces";
+import { GameHeader } from "./components/game/GameHeader";
+import { useUser } from "./UserContext";
+import { BoardPiece } from "./components/game/board/BoardPiece";
+import { BoardContainer } from "./components/game/board/BoardGrid";
 
 
 interface JoinPayload  {
@@ -17,7 +21,7 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
     bishop: { white: "♗", black: "♝" },
     queen: { white: "♕", black: "♛" },
     king: { white: "♔", black: "♚" },
-    pawn: { white: "♙", black: "♟" },
+    pawn: { white: "p", black:("o") },
 };
 
 const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
@@ -71,30 +75,47 @@ async function getGameExists(gameId: string, playerName: string): Promise<boolea
 }
 
 export const ChessGame: React.FC = () => {
-  // Estados principais
+const {
+  darkMode,
+  setDarkMode,
+  gameId,
+  setGameId,
+  highlights,
+  setHighlights,
+  captureHighlights,
+  setCaptureHighlights,
+  playerColor,
+  setPlayerColor,
+  promotionModal,
+  setPromotionModal,
+  endGameModal,
+  setEndGameModal,
+  joinOrCreateModal,
+  setJoinOrCreateModal,
+  inputPlayerName,
+  setInputPlayerName,
+  JoinInputPlayerName,
+  setJoinInputPlayerName,
+  inputGameId,
+  setInputGameId,
+  turn,
+  setTurn,
+  playerName,
+  setPlayerName,
+  moveInfo, setMoveInfo,
+  deadPieces, setDeadPieces
+} = useUser();
+
+
+  // // Estados principais
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
-  const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
+
   const [selected, setSelected] = useState<Position | null>(null);
-  const [turn, setTurn] = useState<PieceColor>("white");
-  const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
-  const [highlights, setHighlights] = useState<Position[]>([]);
-  const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
+ 
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
-  // Modais
-  const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>(
-    { open: false }
-  );
-  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: string }>({ open: false });
-  const [joinOrCreateModal, setJoinOrCreateModal] = useState(true);
-  // Nomes dos jogadores
-  const gameId = useRef<string | null>(null); //são refs pois não renderizam, é tipo uma variavel comum msm
-  const playerName = useRef<string | null>(null);
-  const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
   
-  const [inputPlayerName, setInputPlayerName] = useState<string>(""); // usado no input do nome no modal quando cria uma sala
-  const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>(""); // usado no input do nome quando vai entrar em sala existente no modal
-  const [inputGameId, setInputGameId] = useState<string>(""); // usado no input do id do jogo no modal
+  const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
+
   
   // refs para posicionamento do modal de promoção
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
@@ -124,8 +145,8 @@ export const ChessGame: React.FC = () => {
       } 
     try{
       await getGameExists(lsGameId ,lsPlayerName);
-      gameId.current = lsGameId;
-      playerName.current = lsPlayerName;
+      setGameId(lsGameId);
+      setPlayerName(lsPlayerName);
       setJoinOrCreateModal(false);
     } catch(error){
       console.error("Erro ao restaurar sessão:", error);
@@ -133,7 +154,7 @@ export const ChessGame: React.FC = () => {
       localStorage.removeItem("gameId");
     }
     
-  if (!gameId.current || !playerName.current) return;
+  if (!lsGameId || !lsPlayerName) return;
 
   const socket = io(WS_API_URL);
 
@@ -142,7 +163,7 @@ export const ChessGame: React.FC = () => {
     // }
 
   socket.on("connect", () => {
-    socket.emit("join", {gameId:gameId.current, playerName:playerName.current} as JoinPayload); //passagem de objeto tipado com as
+    socket.emit("join", {gameId: lsGameId, playerName:lsPlayerName} as JoinPayload); //passagem de objeto tipado com as
   });
 
   socket.on("joined", ({ board, color, turn }) => {
@@ -174,6 +195,16 @@ export const ChessGame: React.FC = () => {
 }
 fetchValidGame();
 }, [effect]);
+
+
+useEffect(() => {
+  const root = window.document.documentElement;
+  if (darkMode) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+}, [darkMode]);
 
 // 4. Tocar som de game over
 useEffect(() => {
@@ -220,7 +251,7 @@ useEffect(() => {
       // NOVO: buscar movimentos possíveis do back-end
       console.log("cor do jgoador atual", playerColor)
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-        const response = await fetch(`${HTTP_API_URL}/games/${gameId.current}/moves`, {
+        const response = await fetch(`${HTTP_API_URL}/games/${gameId}/moves`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ from: { row, col } })
@@ -243,7 +274,7 @@ useEffect(() => {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    socket?.emit('move', { gameId:gameId.current, from, to, promotionType, playerName:playerName.current });
+    socket?.emit('move', { gameId:gameId, from, to, promotionType, playerName:playerName });
   }
 
   // Modal de promoção
@@ -275,30 +306,36 @@ useEffect(() => {
     localStorage.removeItem("playerName");
     setDeadPieces({ white: [], black: [] });
     setTurn("white");
-      if(!gameId.current){ 
+      if(!gameId){ 
         console.log('erro, o ref gameId não existe');
         return;
       }
       if(!op && op!=='leave'){
-      deleteGame(gameId.current);
+      deleteGame(gameId);
       setJoinOrCreateModal(true);
       }
      else{
       setJoinOrCreateModal(true);
      }
   };
+  const cleanStates = () => {
+    setInputPlayerName("");
+    setInputGameId("");
+    setJoinInputPlayerName("");
+  }
 
   // Novo: fluxo para criar jogo
   const handleCreateGame = async () => {
     if (!inputPlayerName) return;
     const id = await createGame();
     await joinGame(id, inputPlayerName);
-    gameId.current = id;
-    playerName.current = inputPlayerName;
+    setGameId(id);
+    setPlayerName(inputPlayerName);
     setJoinOrCreateModal(false);
     setMoveInfo(`Aguardando outro jogador entrar... (ID: ${id})`);
     localStorage.setItem("gameId", id);
-    localStorage.setItem("playerName", playerName.current)
+    localStorage.setItem("playerName", inputPlayerName)
+    cleanStates();
     setEffect(!effect); // força o re-render
   };
 
@@ -308,152 +345,138 @@ useEffect(() => {
     
     const result = await joinGame(inputGameId, JoinInputPlayerName);
     if (result.success) { //caso retorne sucesso
-      gameId.current = inputGameId; //atribui o valor do state ao ref
-      playerName.current = JoinInputPlayerName; //atribui o valor do state ao ref
+      setGameId(inputGameId); //atribui o valor do state ao ref
+      setPlayerName(JoinInputPlayerName); //atribui o valor do state ao ref
   
       setJoinOrCreateModal(false); // fecha o modal
       
       // setMoveInfo(`Entrou no jogo ${joinGameId}`);
-      localStorage.setItem("gameId", gameId.current);
-      localStorage.setItem("playerName", playerName.current);
+      localStorage.setItem("gameId", inputGameId);
+      localStorage.setItem("playerName", JoinInputPlayerName);
+      cleanStates();
       setEffect(!effect); // força o re-render
     } else {
       setMoveInfo("Erro ao entrar no jogo.");
     }
   };
 
-  // Render
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
-      
-      <ModalInicio
-        joinOrCreateModal={joinOrCreateModal}
-        inputPlayerName = {inputPlayerName}
-        setInputPlayerName = {setInputPlayerName}
-        handleCreateGame={handleCreateGame}
-        handleJoinGame={handleJoinGame}
-        inputGameId={inputGameId}
-        setInputGameId={setInputGameId}
-        JoinInputPlayerName={JoinInputPlayerName}
-        setJoinInputPlayerName={setJoinInputPlayerName}
+    <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
+        {/* <button onClick={() => setDarkMode(!darkMode)}
+          className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
+        bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
+        {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
+        </button> */}
+
+    <ModalInicio
+      handleCreateGame={handleCreateGame}
+      handleJoinGame={handleJoinGame}
     />
-      <div className="grid gap-12 grid-cols-1 md:grid-cols-3 p-8" id="main-grid">
+
+    <div className="order-1 lg:order-1 w-full lg:w-auto flex flex-row gap-10 items-center">
+      
+ 
         <DeadPieces 
           deadPieces={deadPieces}
           pieceSymbols={pieceSymbols}
           endGameModal={endGameModal}
         />
+    
 
-        {/* Chess Board & Info */}
-        <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-          <div className="flex flex-row w-800px items-center bg-yellow-100">
-              <div id="turn-info" className=" p-5 text-lg text-center rounded-lg grow">
-              {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
-              : `Turno: ${turn === "white" ? playerName.current || "Jogador Branco" : playerName.current || "Jogador Preto"}`}
-          </div>
-             <button 
-             onClick={() => handleRestart('leave')}
-             className="bg-red-500 cursor-pointer h-10 rounded-lg">SAIR DO JOGO</button>
-               
-          </div>
-          <div>
-            <div id="board-wrapper" className="flex items-center">
-              {/* Board */}
-              <div
-                id="board"
-                className="grid grid-cols-8 grid-rows-8 border-4 border-neutral-800 relative"
-                style={{ width: 800, height: 800 }}
-              >
-                {board.map((rowArr, row) =>
-                  rowArr.map((piece, col) => {
-                    const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
-                    const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-                    
-                    return (
-                      <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el;}}
-                        className={`
-                          w-[100px] h-[100px] flex items-center justify-center relative ${(row + col) % 2 === 0 ? "bg-yellow-100" : "bg-yellow-700"} cursor-pointer
-                          ${isHighlight ? "!bg-green-500" : ""}
-                          ${isCapture ? "!bg-red-500" : ""}`}
-                        onClick={() => handleSquareClick(row, col)}
-                      >
-                        <span className="piece absolute text-4xl select-none pointer-events-none">
-                          {piece ? pieceSymbols[piece.type][piece.color] : ""}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {/* Y Coordinates */}
-              <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 text-center">
-                {[8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                  <div key={n} className="h-[100px] flex items-center justify-center">{n}</div>
-                ))}
-              </div>
+      {/* Chess Board & Info */}
+      <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
+        <GameHeader handleRestart={handleRestart}
+        />
+
+        <div>
+          <div id="board-wrapper" className="flex">
+            {/* Board */}
+            <BoardContainer>
+              {board.map((rowArr, row) =>
+                rowArr.map((piece, col) => {
+                  const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
+                  const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
+                  
+                  return <BoardPiece 
+                
+                  row={row}
+                  col={col}
+                  boardRefs={boardRefs}
+                  isHighlight={isHighlight}
+                  isCapture={isCapture}
+                  piece={piece}
+                  handleSquareClick={handleSquareClick}
+                  />
+                  
+                })
+              )}
+            </BoardContainer>
+
             </div>
-            {/* X Coordinates */}
-            <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 text-center">
-              {["A", "B", "C", "D", "E", "F", "G", "H"].map((l) => (
-                <div key={l}>{l}</div>
-              ))}
-            </div>
+            {/* Y Coordinates */}
             
-            {/* Info Panel */}
-            <div className="info-panel text-center mt-2">
-              <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
+          </div>
+          {/* X Coordinates */}
+          <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
+            {["A", "B", "C", "D", "E", "F", "G", "H"].map((l) => (
+              <div key={l}>{l}</div>
+            ))}
+          </div>
+
+          {/* Info Panel */}
+          <div className="info-panel text-center mt-2">
+            <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {promotionModal.open && (
+        <div
+          className="fixed z-50"
+          style={{
+            left: promotionModal.squareRect?.left,
+            top: promotionModal.color === "white"
+              ? (promotionModal.squareRect?.top ?? 0) - 60
+              : (promotionModal.squareRect?.bottom ?? 0),
+            position: "absolute"
+          }}
+        >
+          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-700 dark:border-yellow-500 rounded-lg p-6 shadow-lg">
+            <h2 className="font-serif text-xl font-bold mb-4">Escolha uma peça para promoção</h2>
+            <div className="flex gap-4 justify-center">
+              {(["queen", "rook", "bishop", "knight"] as PieceType[]).map((type) => (
+                <button
+                  key={type}
+                  className="text-3xl w-12 h-12 p-1 cursor-pointer bg-yellow-100 dark:bg-yellow-800 border border-yellow-700 rounded hover:bg-yellow-700 hover:text-yellow-100 dark:hover:bg-yellow-500 dark:hover:text-neutral-900"
+                  onClick={() => handlePromotion(type)}
+                >
+                  {pieceSymbols[type][promotionModal.color!]}
+                </button>
+              ))}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Modals */}
-        {/* Promotion Modal */}
-        {promotionModal.open && (
-          <div
-            className="fixed z-50"
-            style={{
-              left: promotionModal.squareRect?.left,
-              top: promotionModal.color === "white"
-                ? (promotionModal.squareRect?.top ?? 0) - 60
-                : (promotionModal.squareRect?.bottom ?? 0),
-              position: "absolute"
-            }}
-          >
-            <div className="bg-yellow-100 border-2 border-yellow-700 rounded-lg p-6 shadow-lg">
-              <h2 className="font-serif text-xl font-bold mb-4">Escolha uma peça para promoção</h2>
-              <div className="flex gap-4 justify-center">
-                {(["queen", "rook", "bishop", "knight"] as PieceType[]).map((type) => (
-                  <button
-                    key={type}
-                    className="text-3xl w-12 h-12 p-1 cursor-pointer bg-yellow-100 border border-yellow-700 rounded hover:bg-yellow-700 hover:text-yellow-100"
-                    onClick={() => handlePromotion(type)}
-                  >
-                    {pieceSymbols[type][promotionModal.color!]}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* End Game Modal */}
+      {endGameModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
+            <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
+            <p id="winnerMessage">{endGameModal.winner}</p>
+            <button
+              className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
+              onClick={() => handleRestart(null)}
+            >
+              Encerrar
+            </button>
           </div>
-        )}
-
-        {/* End Game Modal */}
-        {endGameModal.open && (
-          <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl border-4 border-neutral-800 shadow-xl flex flex-col gap-4 items-center">
-              <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-              <p id="winnerMessage">{endGameModal.winner}</p>
-               <button
-                className="bg-neutral-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900"
-                onClick={() => handleRestart(null)}>
-                Encerrar
-              </button>
-            </div>
-          </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
-  );
+);
+
 };
 
 export default ChessGame;
