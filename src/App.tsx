@@ -5,6 +5,10 @@ import ModalInicio from "./components/modals/Modal";
 import type { PieceColor, PieceType, Position, Piece} from "./types/types";
 import { DeadPieces } from "./components/game/DeadPieces";
 import { DivGameId } from "./components/game/GameId";
+import { GameHeader } from "./components/game/GameHeader";
+import { useUser } from "./UserContext";
+import { BoardPiece } from "./components/game/board/BoardPiece";
+import { BoardContainer } from "./components/game/board/BoardGrid";
 
 
 interface JoinPayload  {
@@ -72,31 +76,47 @@ async function getGameExists(gameId: string, playerName: string): Promise<boolea
 }
 
 export const ChessGame: React.FC = () => {
-    const [darkMode, setDarkMode] = useState(true);
-  // Estados principais
+const {
+  darkMode,
+  setDarkMode,
+  gameId,
+  setGameId,
+  highlights,
+  setHighlights,
+  captureHighlights,
+  setCaptureHighlights,
+  playerColor,
+  setPlayerColor,
+  promotionModal,
+  setPromotionModal,
+  endGameModal,
+  setEndGameModal,
+  joinOrCreateModal,
+  setJoinOrCreateModal,
+  inputPlayerName,
+  setInputPlayerName,
+  JoinInputPlayerName,
+  setJoinInputPlayerName,
+  inputGameId,
+  setInputGameId,
+  turn,
+  setTurn,
+  playerName,
+  setPlayerName,
+  moveInfo, setMoveInfo,
+  deadPieces, setDeadPieces
+} = useUser();
+
+
+  // // Estados principais
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
-  const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
+
   const [selected, setSelected] = useState<Position | null>(null);
-  const [turn, setTurn] = useState<PieceColor>("white");
-  const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
-  const [highlights, setHighlights] = useState<Position[]>([]);
-  const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
+ 
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
-  // Modais
-  const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>(
-    { open: false }
-  );
-  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: string }>({ open: false });
-  const [joinOrCreateModal, setJoinOrCreateModal] = useState(true);
-  // Nomes dos jogadores
-  const gameId = useRef<string | null>(null); //são refs pois não renderizam, é tipo uma variavel comum msm
-  const playerName = useRef<string | null>(null);
-  const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
   
-  const [inputPlayerName, setInputPlayerName] = useState<string>(""); // usado no input do nome no modal quando cria uma sala
-  const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>(""); // usado no input do nome quando vai entrar em sala existente no modal
-  const [inputGameId, setInputGameId] = useState<string>(""); // usado no input do id do jogo no modal
+  const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
+
   
   // refs para posicionamento do modal de promoção
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
@@ -126,8 +146,8 @@ export const ChessGame: React.FC = () => {
       } 
     try{
       await getGameExists(lsGameId ,lsPlayerName);
-      gameId.current = lsGameId;
-      playerName.current = lsPlayerName;
+      setGameId(lsGameId);
+      setPlayerName(lsPlayerName);
       setJoinOrCreateModal(false);
     } catch(error){
       console.error("Erro ao restaurar sessão:", error);
@@ -135,7 +155,7 @@ export const ChessGame: React.FC = () => {
       localStorage.removeItem("gameId");
     }
     
-  if (!gameId.current || !playerName.current) return;
+  if (!gameId || !playerName) return;
 
   const socket = io(WS_API_URL);
 
@@ -144,7 +164,7 @@ export const ChessGame: React.FC = () => {
     // }
 
   socket.on("connect", () => {
-    socket.emit("join", {gameId:gameId.current, playerName:playerName.current} as JoinPayload); //passagem de objeto tipado com as
+    socket.emit("join", {gameId:gameId, playerName:playerName} as JoinPayload); //passagem de objeto tipado com as
   });
 
   socket.on("joined", ({ board, color, turn }) => {
@@ -232,7 +252,7 @@ useEffect(() => {
       // NOVO: buscar movimentos possíveis do back-end
       console.log("cor do jgoador atual", playerColor)
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-        const response = await fetch(`${HTTP_API_URL}/games/${gameId.current}/moves`, {
+        const response = await fetch(`${HTTP_API_URL}/games/${gameId}/moves`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ from: { row, col } })
@@ -255,7 +275,7 @@ useEffect(() => {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    socket?.emit('move', { gameId:gameId.current, from, to, promotionType, playerName:playerName.current });
+    socket?.emit('move', { gameId:gameId, from, to, promotionType, playerName:playerName });
   }
 
   // Modal de promoção
@@ -287,12 +307,12 @@ useEffect(() => {
     localStorage.removeItem("playerName");
     setDeadPieces({ white: [], black: [] });
     setTurn("white");
-      if(!gameId.current){ 
+      if(!gameId){ 
         console.log('erro, o ref gameId não existe');
         return;
       }
       if(!op && op!=='leave'){
-      deleteGame(gameId.current);
+      deleteGame(gameId);
       setJoinOrCreateModal(true);
       }
      else{
@@ -310,12 +330,12 @@ useEffect(() => {
     if (!inputPlayerName) return;
     const id = await createGame();
     await joinGame(id, inputPlayerName);
-    gameId.current = id;
-    playerName.current = inputPlayerName;
+    setGameId(id);
+    setPlayerName(inputPlayerName);
     setJoinOrCreateModal(false);
     setMoveInfo(`Aguardando outro jogador entrar... (ID: ${id})`);
     localStorage.setItem("gameId", id);
-    localStorage.setItem("playerName", playerName.current)
+    localStorage.setItem("playerName", inputPlayerName)
     cleanStates();
     setEffect(!effect); // força o re-render
   };
@@ -326,14 +346,14 @@ useEffect(() => {
     
     const result = await joinGame(inputGameId, JoinInputPlayerName);
     if (result.success) { //caso retorne sucesso
-      gameId.current = inputGameId; //atribui o valor do state ao ref
-      playerName.current = JoinInputPlayerName; //atribui o valor do state ao ref
+      setGameId(inputGameId); //atribui o valor do state ao ref
+      setPlayerName(JoinInputPlayerName); //atribui o valor do state ao ref
   
       setJoinOrCreateModal(false); // fecha o modal
       
       // setMoveInfo(`Entrou no jogo ${joinGameId}`);
-      localStorage.setItem("gameId", gameId.current);
-      localStorage.setItem("playerName", playerName.current);
+      localStorage.setItem("gameId", inputGameId);
+      localStorage.setItem("playerName", JoinInputPlayerName);
       cleanStates();
       setEffect(!effect); // força o re-render
     } else {
@@ -341,9 +361,7 @@ useEffect(() => {
     }
   };
 
-  // Render
-// Render
-return (
+  return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100 ">
         <button onClick={() => setDarkMode(!darkMode)}
           className="absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
@@ -352,21 +370,14 @@ return (
         </button>
 
     <ModalInicio
-      joinOrCreateModal={joinOrCreateModal}
-      inputPlayerName={inputPlayerName}
-      setInputPlayerName={setInputPlayerName}
       handleCreateGame={handleCreateGame}
       handleJoinGame={handleJoinGame}
-      inputGameId={inputGameId}
-      setInputGameId={setInputGameId}
-      JoinInputPlayerName={JoinInputPlayerName}
-      setJoinInputPlayerName={setJoinInputPlayerName}
     />
 
     <div className="grid gap-12 grid-cols-1 md:grid-cols-3" id="main-grid">
       
       <div className="hidden md:flex flex-col justify-between items-end h-3/4">
-        <DivGameId gameId={gameId} />
+        <DivGameId />
         <DeadPieces 
           deadPieces={deadPieces}
           pieceSymbols={pieceSymbols}
@@ -377,48 +388,33 @@ return (
 
       {/* Chess Board & Info */}
       <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-        <div className="flex flex-row w-screen md:items-center bg-yellow-200 dark:bg-yellow-900 shadow-lg rounded-xl px-4 py-2 border border-yellow-600 dark:border-yellow-700">
-          <div id="turn-info" className="p-5 text-lg text-center rounded-lg grow font-medium">
-            {playerColor ? (turn === playerColor ? "Sua vez" : "Aguardando adversário")
-            : `Turno: ${turn === "white" ? playerName.current || "Jogador Branco" : playerName.current || "Jogador Preto"}`}
-          </div>
-          <button 
-            onClick={() => handleRestart('leave')}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 ml-4 rounded-lg font-bold shadow-md transition">
-            SAIR DO JOGO
-          </button>
-        </div>
+        <GameHeader handleRestart={handleRestart}
+        />
 
         <div>
           <div id="board-wrapper" className="flex">
             {/* Board */}
-            <div
-              id="board"
-              className="grid grid-cols-[repeat(8,1fr)] grid-rows-[repeat(8,50px)] border-4 border-neutral-800 dark:border-neutral-200 w-screen h-3/4"
-              // style={{ width: 800, height: 800 }}
-            >
+            <BoardContainer>
               {board.map((rowArr, row) =>
                 rowArr.map((piece, col) => {
                   const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
                   const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
                   
-                  return (
-                    <div key={`${row}-${col}`} id={`${row}-${col}`} ref={el => { boardRefs.current[row][col] = el; }}
-                      className={`
-                         flex items-center justify-center relative 
-                        ${(row + col) % 2 === 0 ? "bg-yellow-100 dark:bg-yellow-800" : "bg-yellow-700 dark:bg-yellow-600"} 
-                        cursor-pointer transition
-                        ${isHighlight ? "!bg-green-500 dark:!bg-green-700" : ""}
-                        ${isCapture ? "!bg-red-500 dark:!bg-red-700" : ""}`}
-                      onClick={() => handleSquareClick(row, col)}
-                    >
-                      <span className="piece absolute text-4xl select-none pointer-events-none">
-                        {piece ? pieceSymbols[piece.type][piece.color] : ""}
-                      </span>
-                    </div>
-                  );
+                  return <BoardPiece 
+                  row={row}
+                  col={col}
+                  boardRefs={boardRefs}
+                  isHighlight={isHighlight}
+                  isCapture={isCapture}
+                  piece={piece}
+                  handleSquareClick={handleSquareClick}
+                  pieceSymbols={pieceSymbols}
+                  />
+                  
                 })
               )}
+            </BoardContainer>
+
             </div>
             {/* Y Coordinates */}
             <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
@@ -486,7 +482,6 @@ return (
         </div>
       )}
     </div>
-  </div>
 );
 
 };
