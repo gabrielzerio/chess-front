@@ -4,7 +4,6 @@ import ModalInicio from "./components/modals/Modal";
 
 import type { PieceColor, PieceType, Position, Piece} from "./types/types";
 import { DeadPieces } from "./components/game/DeadPieces";
-import { DivGameId } from "./components/game/GameId";
 import { GameHeader } from "./components/game/GameHeader";
 import { useUser } from "./UserContext";
 import { BoardPiece } from "./components/game/board/BoardPiece";
@@ -155,7 +154,7 @@ const {
       localStorage.removeItem("gameId");
     }
     
-  if (!gameId || !playerName) return;
+  if (!lsGameId || !lsPlayerName) return;
 
   const socket = io(WS_API_URL);
 
@@ -164,7 +163,7 @@ const {
     // }
 
   socket.on("connect", () => {
-    socket.emit("join", {gameId:gameId, playerName:playerName} as JoinPayload); //passagem de objeto tipado com as
+    socket.emit("join", {gameId: lsGameId, playerName:lsPlayerName} as JoinPayload); //passagem de objeto tipado com as
   });
 
   socket.on("joined", ({ board, color, turn }) => {
@@ -362,32 +361,30 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100 ">
-        <button onClick={() => setDarkMode(!darkMode)}
-          className="absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
+    <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
+        {/* <button onClick={() => setDarkMode(!darkMode)}
+          className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
         bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
         {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
-        </button>
+        </button> */}
 
     <ModalInicio
       handleCreateGame={handleCreateGame}
       handleJoinGame={handleJoinGame}
     />
 
-    <div className="grid gap-12 grid-cols-1 md:grid-cols-3" id="main-grid">
+    <div className="order-1 lg:order-1 w-full lg:w-auto flex flex-row gap-10 items-center">
       
-      <div className="hidden md:flex flex-col justify-between items-end h-3/4">
-        <DivGameId />
+ 
         <DeadPieces 
           deadPieces={deadPieces}
           pieceSymbols={pieceSymbols}
           endGameModal={endGameModal}
         />
-        
-      </div>
+    
 
       {/* Chess Board & Info */}
-      <div className={`chess-container flex flex-col gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
+      <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
         <GameHeader handleRestart={handleRestart}
         />
 
@@ -401,6 +398,7 @@ useEffect(() => {
                   const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
                   
                   return <BoardPiece 
+                
                   row={row}
                   col={col}
                   boardRefs={boardRefs}
@@ -408,7 +406,6 @@ useEffect(() => {
                   isCapture={isCapture}
                   piece={piece}
                   handleSquareClick={handleSquareClick}
-                  pieceSymbols={pieceSymbols}
                   />
                   
                 })
@@ -417,11 +414,7 @@ useEffect(() => {
 
             </div>
             {/* Y Coordinates */}
-            <div className="y-coordinates grid grid-rows-8 ml-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
-              {[8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                <div key={n} className="h-[100px] flex items-center justify-center">{n}</div>
-              ))}
-            </div>
+            
           </div>
           {/* X Coordinates */}
           <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">

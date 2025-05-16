@@ -13,7 +13,7 @@ function ModalInicio({handleCreateGame, handleJoinGame}: ChildProps) {
 
 return (
   contexto.joinOrCreateModal && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center z-50 w-screen md:">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center z-50 w-screen sm:items-center">
       <div className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white p-8 rounded-2xl border-4 border-neutral-800 dark:border-yellow-400 shadow-xl flex flex-col gap-6 items-center min-w-[350px]">
         <h2 className="font-serif text-2xl font-bold mb-4">♟️ Bem-vindo ao Xadrez Online</h2>
 
