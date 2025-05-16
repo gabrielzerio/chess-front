@@ -1,1 +1,9 @@
+@font-face {
+    font-family: 'Chess';
+    src: url(/src/assets/fonts/CHEQ_TT.TTF);
+}
 @import "tailwindcss";
+
+@theme{
+    --font-chess: Chess;
+}

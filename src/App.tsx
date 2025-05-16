@@ -22,7 +22,7 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
     bishop: { white: "♗", black: "♝" },
     queen: { white: "♕", black: "♛" },
     king: { white: "♔", black: "♚" },
-    pawn: { white: "♙", black: "♟" },
+    pawn: { white: "p", black:("o") },
 };
 
 const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
