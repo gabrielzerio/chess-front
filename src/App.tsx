@@ -176,10 +176,11 @@ const {
   socket.on("boardUpdate", ({ board, turn }) => {
     setBoard(board);
     setTurn(turn);
+    playAudioMove();
   });
 
   socket.on("moveError", ({ message }) => {
-    alert(message);
+    
   });
 
   socket.on("gameOver", ({ winner }) => {
@@ -267,6 +268,10 @@ useEffect(() => {
       }
     }
   };
+
+function playAudioMove(){
+  new Audio("/sounds/moveSound.mp3").play();
+}
 
   // Função para enviar movimento ao servidor (corrigida)
   function sendMove(from: Position, to: Position, promotionType?: PieceType) {
@@ -406,8 +411,26 @@ useEffect(() => {
                   isCapture={isCapture}
                   piece={piece}
                   handleSquareClick={handleSquareClick}
-                  />
-                  
+                  /> //CODIGO DE TABULEIRO INVERTIDO ABAIXO
+  //                 {(playerColor === "black" ? board.slice().reverse() : board).map((rowArr, rowIdx) =>
+  //   (playerColor === "black" ? rowArr.slice().reverse() : rowArr).map((piece, colIdx) => (
+  //     <BoardPiece
+  //       row={playerColor === "black" ? 7 - rowIdx : rowIdx}
+  //       col={playerColor === "black" ? 7 - colIdx : colIdx}
+  //       boardRefs={boardRefs}
+  //       isHighlight={highlights.some(pos =>
+  //         pos.row === (playerColor === "black" ? 7 - rowIdx : rowIdx) &&
+  //         pos.col === (playerColor === "black" ? 7 - colIdx : colIdx)
+  //       )}
+  //       isCapture={captureHighlights.some(pos =>
+  //         pos.row === (playerColor === "black" ? 7 - rowIdx : rowIdx) &&
+  //         pos.col === (playerColor === "black" ? 7 - colIdx : colIdx)
+  //       )}
+  //       piece={piece}
+  //       handleSquareClick={handleSquareClick}
+  //     />
+  //   )) 
+  // )}
                 })
               )}
             </BoardContainer>
