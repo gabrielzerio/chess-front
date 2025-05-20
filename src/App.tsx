@@ -12,18 +12,9 @@ import {
   createGame,
   joinGame,
   deleteGame,
-  getGameExists,
-  getPossibleMoves,
 } from "./services/api";
-import { useSocket } from "./hooks/useSocket";
 import { useRestoreSession } from "./hooks/useRestoreSession";
 import { initSocket } from "./services/socket";
-
-
-interface JoinPayload  {
-  gameId:string,
-  playerName:string
-}
 
 const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
   rook: { white: "♖", black: "♜" },
@@ -35,7 +26,6 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
 };
 
 const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
-const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
 
 const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
@@ -101,27 +91,6 @@ const {
     return () => window.removeEventListener("keydown", handler);
   }, [ promotionModal.open, endGameModal.open]);
 
-
-const { sendMovee } = useSocket({ //utilizar o UserContext
-  gameId,
-  playerName,
-  onJoined: (board, color, turn) => {
-    setBoard(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(`Você está jogando de ${color === "white" ? "brancas" : "pretas"}`);
-  },
-  onUpdateBoard: (board, turn) => {
-    setBoard(board);
-    setTurn(turn);
-  },
-  onGameOver: (winner) => {
-    setEndGameModal({ open: true, winner: `O ganhador foi ${winner}` });
-  },
-});
-
-
-
 useRestoreSession({
   onSuccess: (gameId, playerName) => {
     setGameId(gameId);
@@ -133,6 +102,7 @@ useRestoreSession({
       playerName,
       onJoined: ({ board, color, turn }) => {
         setBoard(board);
+        console.log(board);
         setPlayerColor(color);
         setTurn(turn);
         setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
