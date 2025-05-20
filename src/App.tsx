@@ -8,6 +8,16 @@ import { GameHeader } from "./components/game/GameHeader";
 import { useUser } from "./UserContext";
 import { BoardPiece } from "./components/game/board/BoardPiece";
 import { BoardContainer } from "./components/game/board/BoardGrid";
+import {
+  createGame,
+  joinGame,
+  deleteGame,
+  getGameExists,
+  getPossibleMoves,
+} from "./services/api";
+import { useSocket } from "./hooks/useSocket";
+import { useRestoreSession } from "./hooks/useRestoreSession";
+import { initSocket } from "./services/socket";
 
 
 interface JoinPayload  {
@@ -31,48 +41,6 @@ const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
   .map(() => Array(8).fill(null));
 
-async function createGame() {
-  const response = await fetch(`${HTTP_API_URL}/createGame`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  const data = await response.json();
-  return data.gameId;
-}
-
-async function joinGame(gameId: string, playerName: string) {
-  const response = await fetch(`${HTTP_API_URL}/games/${gameId}/join`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playerName })
-  });
-  return await response.json();
-}
-
-async function deleteGame(gameId: string) {
-  const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  return await response.json();
-}
-
-async function getGameExists(gameId: string, playerName: string): Promise<boolean> { //modifiquei a função para retornar erro se os dados recebidos forem invalidos
-  const response = await fetch(`${HTTP_API_URL}/games/validgame`, { //precisa existir o mesmo gameId e playerName para funcionar
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId, playerName })
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Jogo não encontrado (404)");
-    } else {
-      throw new Error(`Erro ao buscar tabuleiro: ${response.status}`);
-    }
-  }
-  return await response.json();
-}
 
 export const ChessGame: React.FC = () => {
 const {
@@ -133,69 +101,63 @@ const {
     return () => window.removeEventListener("keydown", handler);
   }, [ promotionModal.open, endGameModal.open]);
 
-// 3. Conectar ao WebSocket ao entrar na sala
-  useEffect(() => {
-  const fetchValidGame = async () => {
-    const lsPlayerName = localStorage.getItem("playerName");
-    const lsGameId = localStorage.getItem("gameId");
-      if(!lsPlayerName || !lsGameId){
-          localStorage.removeItem("playerName");
-          localStorage.removeItem("gameId");
-        return;
-      } 
-    try{
-      await getGameExists(lsGameId ,lsPlayerName);
-      setGameId(lsGameId);
-      setPlayerName(lsPlayerName);
-      setJoinOrCreateModal(false);
-    } catch(error){
-      console.error("Erro ao restaurar sessão:", error);
-      localStorage.removeItem("playerName");
-      localStorage.removeItem("gameId");
-    }
-    
-  if (!lsGameId || !lsPlayerName) return;
 
-  const socket = io(WS_API_URL);
-
-    // const payload:JoinPayload = {
-    //   gameId:gameId.current, playerName:playerName.current
-    // }
-
-  socket.on("connect", () => {
-    socket.emit("join", {gameId: lsGameId, playerName:lsPlayerName} as JoinPayload); //passagem de objeto tipado com as
-  });
-
-  socket.on("joined", ({ board, color, turn }) => {
+const { sendMovee } = useSocket({ //utilizar o UserContext
+  gameId,
+  playerName,
+  onJoined: (board, color, turn) => {
     setBoard(board);
     setPlayerColor(color);
     setTurn(turn);
-    setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
-  });
-
-  socket.on("boardUpdate", ({ board, turn }) => {
+    setMoveInfo(`Você está jogando de ${color === "white" ? "brancas" : "pretas"}`);
+  },
+  onUpdateBoard: (board, turn) => {
     setBoard(board);
     setTurn(turn);
-    playAudioMove();
-  });
+  },
+  onGameOver: (winner) => {
+    setEndGameModal({ open: true, winner: `O ganhador foi ${winner}` });
+  },
+});
 
-  socket.on("moveError", ({ message }) => {
-    
-  });
 
-  socket.on("gameOver", ({ winner }) => {
-    console.log("recebi gameOver sim", winner);
-    setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
-  });
 
-  setSocket(socket);
+useRestoreSession({
+  onSuccess: (gameId, playerName) => {
+    setGameId(gameId);
+    setPlayerName(playerName);
+    setJoinOrCreateModal(false);
 
-  return () => {
-    socket.disconnect();
-  };
-}
-fetchValidGame();
-}, [effect]);
+    const socket = initSocket({
+      gameId,
+      playerName,
+      onJoined: ({ board, color, turn }) => {
+        setBoard(board);
+        setPlayerColor(color);
+        setTurn(turn);
+        setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
+      },
+      onBoardUpdate: ({ board, turn }) => {
+        setBoard(board);
+        setTurn(turn);
+        playAudioMove();
+      },
+      onGameOver: ({ winner }) => {
+        setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
+      },
+    });
+
+    setSocket(socket);
+
+    return () => {
+      socket.disconnect();
+    };
+  },
+  onFailure: () => {
+    // Exemplo: mostrar modal de erro, redirecionar etc
+  },
+});
+
 
 
 useEffect(() => {
