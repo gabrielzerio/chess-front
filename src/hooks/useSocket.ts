@@ -31,10 +31,10 @@ export const useSocket = ({
     const socket = io(import.meta.env.VITE_WS_API_URL);
 
     socket.on("connect", () => {
-      socket.emit("join", { gameId, playerName } as JoinPayload);
+      socket.emit("joinGame", { gameId, playerName } as JoinPayload);
     });
 
-    socket.on("joined", ({ board, color, turn }) => {
+    socket.on("joinedGame", ({ board, color, turn }) => {
       onJoined(board, color, turn);
     });
 

@@ -10,7 +10,6 @@ import { BoardPiece } from "./components/game/board/BoardPiece";
 import { BoardContainer } from "./components/game/board/BoardGrid";
 import {
   createGame,
-  joinGame,
   deleteGame,
 } from "./services/api";
 import { useRestoreSession } from "./hooks/useRestoreSession";
