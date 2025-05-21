@@ -137,7 +137,7 @@ const {
 
   socket.on("joinedGame", ({ board, color, turn }) => {
     setBoard(board);
-    console.log(board);n
+    console.log(board);
     setPlayerColor(color);
     setTurn(turn);
     setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
@@ -190,6 +190,8 @@ useEffect(() => {
     setCaptureHighlights([]);
   };
 
+  
+
   // Clique no tabuleiro
   const handleSquareClick = async (row: number, col: number) => {
     
@@ -222,15 +224,22 @@ useEffect(() => {
       // NOVO: buscar movimentos possíveis do back-end
       console.log("cor do jgoador atual", playerColor)
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-        const response = await fetch(`${HTTP_API_URL}/games/${gameId}/moves`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: { row, col } })
+        // const response = await fetch(`${HTTP_API_URL}/games/${gameId}/moves`, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({ from: { row, col } })
+        // });
+        // const data = await response.json();
+        socket?.emit('requestPossibleMoves', {from:{row,col}});
+        socket?.on('possibleMovesResponse', ({normalMoves, captureMoves}) =>{
+
+          setHighlights(normalMoves);
+        setCaptureHighlights(captureMoves);
         });
-        const data = await response.json();
-       
-        setHighlights(data.normalMoves);
-        setCaptureHighlights(data.captureMoves);
+
+
+
+        
 
       } else {
         removeHighlight();
@@ -316,9 +325,9 @@ function playAudioMove(){
   // Novo: fluxo para entrar em jogo existente
   const handleJoinGame = async () => {
     if (!inputGameId || !JoinInputPlayerName) return;
-    
-    const result = await joinGame(inputGameId, JoinInputPlayerName);
-    if (result.success) { //caso retorne sucesso
+      socket?.emit('join');
+      
+
       setGameId(inputGameId); //atribui o valor do state ao ref
       setPlayerName(JoinInputPlayerName); //atribui o valor do state ao ref
   
@@ -329,9 +338,7 @@ function playAudioMove(){
       localStorage.setItem("playerName", JoinInputPlayerName);
       cleanStates();
       setEffect(!effect); // força o re-render
-    } else {
-      setMoveInfo("Erro ao entrar no jogo.");
-    }
+    
   };
 
   return (
