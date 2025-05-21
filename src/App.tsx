@@ -40,14 +40,6 @@ async function createGame() {
   return data.gameId;
 }
 
-async function joinGame(gameId: string, playerName: string) {
-  const response = await fetch(`${HTTP_API_URL}/games/${gameId}/join`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playerName })
-  });
-  return await response.json();
-}
 
 async function deleteGame(gameId: string) {
   const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
@@ -57,22 +49,6 @@ async function deleteGame(gameId: string) {
   return await response.json();
 }
 
-async function getGameExists(gameId: string, playerName: string): Promise<boolean> { //modifiquei a função para retornar erro se os dados recebidos forem invalidos
-  const response = await fetch(`${HTTP_API_URL}/games/validgame`, { //precisa existir o mesmo gameId e playerName para funcionar
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId, playerName })
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Jogo não encontrado (404)");
-    } else {
-      throw new Error(`Erro ao buscar tabuleiro: ${response.status}`);
-    }
-  }
-  return await response.json();
-}
 
 export const ChessGame: React.FC = () => {
 const {
@@ -135,26 +111,19 @@ const {
 
 // 3. Conectar ao WebSocket ao entrar na sala
   useEffect(() => {
-  const fetchValidGame = async () => {
-    const lsPlayerName = localStorage.getItem("playerName");
-    const lsGameId = localStorage.getItem("gameId");
-      if(!lsPlayerName || !lsGameId){
-          localStorage.removeItem("playerName");
-          localStorage.removeItem("gameId");
-        return;
-      } 
-    try{
-      await getGameExists(lsGameId ,lsPlayerName);
-      setGameId(lsGameId);
-      setPlayerName(lsPlayerName);
-      setJoinOrCreateModal(false);
-    } catch(error){
-      console.error("Erro ao restaurar sessão:", error);
-      localStorage.removeItem("playerName");
-      localStorage.removeItem("gameId");
-    }
+       
+  //   try{
+  //     await getGameExists(lsGameId ,lsPlayerName);
+  //     setGameId(lsGameId);
+  //     setPlayerName(lsPlayerName);
+  //     setJoinOrCreateModal(false);
+  //   } catch(error){
+  //     console.error("Erro ao restaurar sessão:", error);
+  //     localStorage.removeItem("playerName");
+  //     localStorage.removeItem("gameId");
+  //   }
     
-  if (!lsGameId || !lsPlayerName) return;
+  // if (!lsGameId || !lsPlayerName) return;
 
   const socket = io(WS_API_URL);
 
@@ -163,11 +132,12 @@ const {
     // }
 
   socket.on("connect", () => {
-    socket.emit("join", {gameId: lsGameId, playerName:lsPlayerName} as JoinPayload); //passagem de objeto tipado com as
+    socket.emit("joinGame", {gameId, playerName} as JoinPayload); //passagem de objeto tipado com as
   });
 
-  socket.on("joined", ({ board, color, turn }) => {
+  socket.on("joinedGame", ({ board, color, turn }) => {
     setBoard(board);
+    console.log(board);n
     setPlayerColor(color);
     setTurn(turn);
     setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
@@ -193,7 +163,7 @@ const {
   return () => {
     socket.disconnect();
   };
-}
+
 fetchValidGame();
 }, [effect]);
 
@@ -333,7 +303,6 @@ function playAudioMove(){
   const handleCreateGame = async () => {
     if (!inputPlayerName) return;
     const id = await createGame();
-    await joinGame(id, inputPlayerName);
     setGameId(id);
     setPlayerName(inputPlayerName);
     setJoinOrCreateModal(false);
