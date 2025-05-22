@@ -38,10 +38,6 @@ const initialBoard: (Piece | null)[][] = Array(8)
 //   const data = await response.json();
 //   return data.gameId;
 // }
-function createGame(response){
-    localStorage.setItem('gameID', response.gameID);
-    localStorage.setItem('userID', response.userID);
-}
 
 async function deleteGame(gameId: string) {
   const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
@@ -90,10 +86,11 @@ const {
 
   const [selected, setSelected] = useState<Position | null>(null);
  
-  // const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
+  const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
   
   const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
 
+  
   function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
     setBoard(board);
     setPlayerColor(color);
@@ -108,9 +105,11 @@ const {
 
   function onConnect() {
     socket.emit('joinGame', { playerName: playerNameLS });
+    setIsconnected(true);
     setJoinOrCreateModal(false);
   }
-  function joinedError(){
+  function joinedError({message:message}:{message:string}){
+    alert(message)
     setJoinOrCreateModal(true);
   }
   function onDisconnect() {
@@ -120,21 +119,38 @@ const {
   if (userIDLS && gameIDLS) {
     socket.auth = { userID: userIDLS, gameID: gameIDLS };
     socket.connect();
+    
   }
-  socket.on('boardUpdate', ({board, turn, status}) => {
+  socket.on('boardUpdate', ({board, turn, status}:{board:Board,turn:PieceColor,status:string}) => {
       setBoard(board),
       setTurn(turn),
       setMoveInfo(status)
    })
 
+   function getMySession({gameID, userID}:{gameID:string, userID:string}){ //vai escutar esse session ao clicar em conectar
+      localStorage.setItem('gameID', gameID);
+      localStorage.setItem('userID',userID);
+      socket.auth = {gameID:gameID, userID:userID};
+   }
+
+   socket.on('session', getMySession);
   socket.on('connect', onConnect);
   socket.on('disconnect', onDisconnect);
   socket.on('joinedGame', joinedGame);
   socket.on('joinError', joinedError);
   return () => {
+    socket.off('connect', onConnect);
     socket.off('disconnect', onDisconnect);
+    socket.off('boardUpdate');
+    socket.off('session', getMySession);
+    socket.off('joinedGame', joinedGame);
+    socket.off('joinError', joinedError);
   };
 }, []);
+
+// useEffect(() => {
+//     socket.emit('joinGame', { playerName: JoinInputPlayerName || 'aaaa' });
+// },[isConnected])
 
   
   // refs para posicionamento do modal de promoção
@@ -179,12 +195,13 @@ useEffect(() => {
 
   function handleCreateGame(){
     socket.connect();
-    socket.emit('requestGameAndUserID', createGame); //callback
-    setJoinOrCreateModal(false)
+    // socket.emit('requestGameAndUserID', createGame); //callback
   }
 
   function handleJoinGame(){
-    
+    socket.auth = {gameID:inputGameId};
+    socket.connect();
+
   }
 
   function handleRestart(){
