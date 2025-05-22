@@ -30,15 +30,18 @@ const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
   .map(() => Array(8).fill(null));
 
-async function createGame() {
-  const response = await fetch(`${HTTP_API_URL}/createGame`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  const data = await response.json();
-  return data.gameId;
+// async function createGame() {
+//   const response = await fetch(`${HTTP_API_URL}/createGame`, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' }
+//   });
+//   const data = await response.json();
+//   return data.gameId;
+// }
+function createGame(response){
+    localStorage.setItem('gameID', response.gameID);
+    localStorage.setItem('userID', response.userID);
 }
-
 
 async function deleteGame(gameId: string) {
   const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
@@ -91,6 +94,13 @@ const {
   
   const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
 
+  function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
+    setBoard(board);
+    setPlayerColor(color);
+    setTurn(turn);
+    setMoveInfo(status);
+  }
+
   useEffect(() => {
   const userIDLS = localStorage.getItem("userID");
   const gameIDLS = localStorage.getItem("gameID");
@@ -100,38 +110,29 @@ const {
     socket.emit('joinGame', { playerName: playerNameLS });
     setJoinOrCreateModal(false);
   }
+  function joinedError(){
+    setJoinOrCreateModal(true);
+  }
   function onDisconnect() {
-  }
-
-  // function createGame({ gameID, userID }: { gameID: string, userID: string }) {
-  const createGame = (response) => {
-    localStorage.setItem('gameID', response.gameID);
-    localStorage.setItem('userID', response.userID);
-  }
-
-  function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
-    setBoard(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(status);
+    socket.disconnect();
   }
 
   if (userIDLS && gameIDLS) {
-    
     socket.auth = { userID: userIDLS, gameID: gameIDLS };
     socket.connect();
   }
+  socket.on('boardUpdate', ({board, turn, status}) => {
+      setBoard(board),
+      setTurn(turn),
+      setMoveInfo(status)
+   })
 
   socket.on('connect', onConnect);
   socket.on('disconnect', onDisconnect);
   socket.on('joinedGame', joinedGame);
-  socket.emit('requestGameAndUserID', createGame); //callback
-
+  socket.on('joinError', joinedError);
   return () => {
-    socket.off('connect', onConnect);
     socket.off('disconnect', onDisconnect);
-    socket.off('joinedGame', joinedGame);
-    socket.off('game', createGame);
   };
 }, []);
 
@@ -178,11 +179,16 @@ useEffect(() => {
 
   function handleCreateGame(){
     socket.connect();
+    socket.emit('requestGameAndUserID', createGame); //callback
     setJoinOrCreateModal(false)
   }
 
   function handleJoinGame(){
     
+  }
+
+  function handleRestart(){
+    socket.disconnect();
   }
 
   // Clique no tabuleiro
@@ -230,14 +236,15 @@ useEffect(() => {
       }
     }
   };
-
+  
+  
   // Função para enviar movimento ao servidor (corrigida)
   function sendMove(from: Position, to: Position, promotionType?: PieceType) {
     if (!playerColor) {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    socket?.emit('move', { gameId:gameId, from, to, promotionType, playerName:playerName });
+    socket?.emit('makeMove', {from, to, promotionType, playerName:playerName });
   }
 
   // Modal de promoção
@@ -297,7 +304,7 @@ useEffect(() => {
       {/* Chess Board & Info */}
       <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
         <GameHeader 
-        // andleRestart={handleRestart}
+        handleRestart={handleRestart}
         />
 
         <div>
