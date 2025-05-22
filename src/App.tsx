@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { io, Socket } from "socket.io-client";
 import ModalInicio from "./components/modals/Modal";
 
-import type { PieceColor, PieceType, Position, Piece} from "./types/types";
+import type { PieceColor, PieceType, Position, Piece, Board} from "./types/types";
 import { DeadPieces } from "./components/game/DeadPieces";
 import { GameHeader } from "./components/game/GameHeader";
 import { useUser } from "./UserContext";
 import { BoardPiece } from "./components/game/board/BoardPiece";
 import { BoardContainer } from "./components/game/board/BoardGrid";
-
+import {socket} from './socket'
 
 interface JoinPayload  {
   gameId:string,
@@ -25,7 +24,7 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
 };
 
 const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
-const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
+// const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
 
 const initialBoard: (Piece | null)[][] = Array(8)
   .fill(null)
@@ -82,15 +81,59 @@ const {
   deadPieces, setDeadPieces
 } = useUser();
 
-
+  
   // // Estados principais
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
 
   const [selected, setSelected] = useState<Position | null>(null);
  
-  const [socket, setSocket] = useState<Socket | null>(null);
+  // const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
   
   const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
+
+  useEffect(() => {
+  const userIDLS = localStorage.getItem("userID");
+  const gameIDLS = localStorage.getItem("gameID");
+  const playerNameLS = localStorage.getItem("playerName");
+
+  function onConnect() {
+    socket.emit('joinGame', { playerName: playerNameLS });
+    setJoinOrCreateModal(false);
+  }
+  function onDisconnect() {
+  }
+
+  // function createGame({ gameID, userID }: { gameID: string, userID: string }) {
+  const createGame = (response) => {
+    localStorage.setItem('gameID', response.gameID);
+    localStorage.setItem('userID', response.userID);
+  }
+
+  function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
+    setBoard(board);
+    setPlayerColor(color);
+    setTurn(turn);
+    setMoveInfo(status);
+  }
+
+  if (userIDLS && gameIDLS) {
+    
+    socket.auth = { userID: userIDLS, gameID: gameIDLS };
+    socket.connect();
+  }
+
+  socket.on('connect', onConnect);
+  socket.on('disconnect', onDisconnect);
+  socket.on('joinedGame', joinedGame);
+  socket.emit('requestGameAndUserID', createGame); //callback
+
+  return () => {
+    socket.off('connect', onConnect);
+    socket.off('disconnect', onDisconnect);
+    socket.off('joinedGame', joinedGame);
+    socket.off('game', createGame);
+  };
+}, []);
 
   
   // refs para posicionamento do modal de promoção
@@ -109,63 +152,6 @@ const {
     return () => window.removeEventListener("keydown", handler);
   }, [ promotionModal.open, endGameModal.open]);
 
-// 3. Conectar ao WebSocket ao entrar na sala
-  useEffect(() => {
-       
-  //   try{
-  //     await getGameExists(lsGameId ,lsPlayerName);
-  //     setGameId(lsGameId);
-  //     setPlayerName(lsPlayerName);
-  //     setJoinOrCreateModal(false);
-  //   } catch(error){
-  //     console.error("Erro ao restaurar sessão:", error);
-  //     localStorage.removeItem("playerName");
-  //     localStorage.removeItem("gameId");
-  //   }
-    
-  // if (!lsGameId || !lsPlayerName) return;
-
-  const socket = io(WS_API_URL);
-
-    // const payload:JoinPayload = {
-    //   gameId:gameId.current, playerName:playerName.current
-    // }
-
-  socket.on("connect", () => {
-    socket.emit("joinGame", {gameId, playerName} as JoinPayload); //passagem de objeto tipado com as
-  });
-
-  socket.on("joinedGame", ({ board, color, turn }) => {
-    setBoard(board);
-    console.log(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(color ? `Você está jogando de ${color === "white" ? "brancas" : "pretas"}` : "");
-  });
-
-  socket.on("boardUpdate", ({ board, turn }) => {
-    setBoard(board);
-    setTurn(turn);
-    playAudioMove();
-  });
-
-  socket.on("moveError", ({ message }) => {
-    
-  });
-
-  socket.on("gameOver", ({ winner }) => {
-    console.log("recebi gameOver sim", winner);
-    setEndGameModal({ open: true, winner: `o Ganhador foi ${winner}` });
-  });
-
-  setSocket(socket);
-
-  return () => {
-    socket.disconnect();
-  };
-
-fetchValidGame();
-}, [effect]);
 
 
 useEffect(() => {
@@ -190,7 +176,14 @@ useEffect(() => {
     setCaptureHighlights([]);
   };
 
-  
+  function handleCreateGame(){
+    socket.connect();
+    setJoinOrCreateModal(false)
+  }
+
+  function handleJoinGame(){
+    
+  }
 
   // Clique no tabuleiro
   const handleSquareClick = async (row: number, col: number) => {
@@ -224,22 +217,12 @@ useEffect(() => {
       // NOVO: buscar movimentos possíveis do back-end
       console.log("cor do jgoador atual", playerColor)
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-        // const response = await fetch(`${HTTP_API_URL}/games/${gameId}/moves`, {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({ from: { row, col } })
-        // });
-        // const data = await response.json();
-        socket?.emit('requestPossibleMoves', {from:{row,col}});
-        socket?.on('possibleMovesResponse', ({normalMoves, captureMoves}) =>{
 
-          setHighlights(normalMoves);
-        setCaptureHighlights(captureMoves);
-        });
-
-
-
-        
+        socket.emit('requestPossibleMoves', {from:{row,col}}, (response) => { //utilização de callback
+          setHighlights(response.normalMoves);
+          setCaptureHighlights(response.captureMoves);
+          console.log(response)
+        })   
 
       } else {
         removeHighlight();
@@ -247,10 +230,6 @@ useEffect(() => {
       }
     }
   };
-
-function playAudioMove(){
-  new Audio("/sounds/moveSound.mp3").play();
-}
 
   // Função para enviar movimento ao servidor (corrigida)
   function sendMove(from: Position, to: Position, promotionType?: PieceType) {
@@ -282,26 +261,7 @@ function playAudioMove(){
     if ((window as any).handlePromotion) (window as any).handlePromotion(type);
   };
 
-  // Modal de reinício
-  const handleRestart = (op:string | null) => {
-    socket?.disconnect(); 
-    setEndGameModal({ open: false });
-     localStorage.removeItem("gameId");
-    localStorage.removeItem("playerName");
-    setDeadPieces({ white: [], black: [] });
-    setTurn("white");
-      if(!gameId){ 
-        console.log('erro, o ref gameId não existe');
-        return;
-      }
-      if(!op && op!=='leave'){
-      deleteGame(gameId);
-      setJoinOrCreateModal(true);
-      }
-     else{
-      setJoinOrCreateModal(true);
-     }
-  };
+ 
   const cleanStates = () => {
     setInputPlayerName("");
     setInputGameId("");
@@ -309,37 +269,7 @@ function playAudioMove(){
   }
 
   // Novo: fluxo para criar jogo
-  const handleCreateGame = async () => {
-    if (!inputPlayerName) return;
-    const id = await createGame();
-    setGameId(id);
-    setPlayerName(inputPlayerName);
-    setJoinOrCreateModal(false);
-    setMoveInfo(`Aguardando outro jogador entrar... (ID: ${id})`);
-    localStorage.setItem("gameId", id);
-    localStorage.setItem("playerName", inputPlayerName)
-    cleanStates();
-    setEffect(!effect); // força o re-render
-  };
 
-  // Novo: fluxo para entrar em jogo existente
-  const handleJoinGame = async () => {
-    if (!inputGameId || !JoinInputPlayerName) return;
-      socket?.emit('join');
-      
-
-      setGameId(inputGameId); //atribui o valor do state ao ref
-      setPlayerName(JoinInputPlayerName); //atribui o valor do state ao ref
-  
-      setJoinOrCreateModal(false); // fecha o modal
-      
-      // setMoveInfo(`Entrou no jogo ${joinGameId}`);
-      localStorage.setItem("gameId", inputGameId);
-      localStorage.setItem("playerName", JoinInputPlayerName);
-      cleanStates();
-      setEffect(!effect); // força o re-render
-    
-  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
@@ -366,7 +296,8 @@ function playAudioMove(){
 
       {/* Chess Board & Info */}
       <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-        <GameHeader handleRestart={handleRestart}
+        <GameHeader 
+        // andleRestart={handleRestart}
         />
 
         <div>
@@ -466,7 +397,7 @@ function playAudioMove(){
             <p id="winnerMessage">{endGameModal.winner}</p>
             <button
               className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
-              onClick={() => handleRestart(null)}
+              // onClick={() => handleRestart(null)}
             >
               Encerrar
             </button>

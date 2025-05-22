@@ -28,8 +28,8 @@ type UserContextType = {
   darkMode: boolean;
   setDarkMode: (value: boolean) => void;
 
- gameId: string | null;
- setGameId: (id: string | null) => void;
+  gameId: string | null;
+  setGameId: (id: string | null) => void;
 
   highlights: Position[];
   setHighlights: (positions: Position[]) => void;
