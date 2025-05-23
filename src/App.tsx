@@ -89,7 +89,7 @@ const {
   const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
   
   const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
-
+  
   
   function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
     setBoard(board);
@@ -97,30 +97,22 @@ const {
     setTurn(turn);
     setMoveInfo(status);
   }
-
-  useEffect(() => {
-  const userIDLS = localStorage.getItem("userID");
-  const gameIDLS = localStorage.getItem("gameID");
-  const playerNameLS = localStorage.getItem("playerName");
-
+  
   function onConnect() {
-    socket.emit('joinGame', { playerName: playerNameLS });
-    setIsconnected(true);
+    socket.emit('joinGame', { playerName: 'asd' });
     setJoinOrCreateModal(false);
   }
   function joinedError({message:message}:{message:string}){
-    alert(message)
     setJoinOrCreateModal(true);
+    localStorage.clear();
+    socket.disconnect();
+    socket.auth = {}
+    console.log('passa quantas vezes aqui')
   }
   function onDisconnect() {
     socket.disconnect();
   }
 
-  if (userIDLS && gameIDLS) {
-    socket.auth = { userID: userIDLS, gameID: gameIDLS };
-    socket.connect();
-    
-  }
   socket.on('boardUpdate', ({board, turn, status}:{board:Board,turn:PieceColor,status:string}) => {
       setBoard(board),
       setTurn(turn),
@@ -133,7 +125,17 @@ const {
       socket.auth = {gameID:gameID, userID:userID};
    }
 
-   socket.on('session', getMySession);
+  useEffect(() => {
+  const userIDLS = localStorage.getItem("userID");
+  const gameIDLS = localStorage.getItem("gameID");
+  const playerNameLS = localStorage.getItem("playerName");
+  socket.connect();
+
+  if (userIDLS && gameIDLS) {
+    socket.auth = { userID: userIDLS, gameID: gameIDLS };
+    socket.connect();
+  }
+  socket.on('session', getMySession);
   socket.on('connect', onConnect);
   socket.on('disconnect', onDisconnect);
   socket.on('joinedGame', joinedGame);
@@ -146,7 +148,9 @@ const {
     socket.off('joinedGame', joinedGame);
     socket.off('joinError', joinedError);
   };
-}, []);
+}, [effect]);
+
+
 
 // useEffect(() => {
 //     socket.emit('joinGame', { playerName: JoinInputPlayerName || 'aaaa' });
@@ -194,18 +198,21 @@ useEffect(() => {
   };
 
   function handleCreateGame(){
-    socket.connect();
+    // socket.connect();
+    setEffect(!effect);
     // socket.emit('requestGameAndUserID', createGame); //callback
   }
 
   function handleJoinGame(){
     socket.auth = {gameID:inputGameId};
     socket.connect();
-
   }
 
   function handleRestart(){
     socket.disconnect();
+    socket.auth = {}
+    localStorage.clear();
+    setJoinOrCreateModal(true);
   }
 
   // Clique no tabuleiro
