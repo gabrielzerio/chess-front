@@ -1,4 +1,4 @@
-import type { Piece } from "../../../types/types";
+import type { Piece, Position } from "../../../types/types";
 
 type ChildProps = {
   row: number;
@@ -7,7 +7,7 @@ type ChildProps = {
   isHighlight: boolean;
   isCapture: boolean;
   piece: Piece | null;
-  handleSquareClick: (row: number, col: number) => Promise<void>
+  handleSquareClick: (position:Position) => Promise<void>
 }
 function getPieceImage(piece: Piece | null): string | null {
   if (!piece) return "";
@@ -24,7 +24,7 @@ export function BoardPiece({ row, col, boardRefs, isHighlight, isCapture, piece,
                         ${(row + col) % 2 === 0 ? "bg-yellow-100 dark:bg-yellow-800" : "bg-yellow-700 dark:bg-yellow-600"} 
                         cursor-pointer transition
                         `}
-      onClick={() => handleSquareClick(row, col)}>
+      onClick={() => handleSquareClick({row, col} as Position)}>
         {isHighlight && (
           <div id='hint' className="rounded-[50%] !bg-green-500 dark:!bg-green-700 w-[50%] h-[50%]"></div>
         )}

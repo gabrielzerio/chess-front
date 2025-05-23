@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import ModalInicio from "./components/modals/Modal";
-
+import {Game} from './components/game/index'
 import type { PieceColor, PieceType, Position, Piece, Board} from "./types/types";
 import { DeadPieces } from "./components/game/DeadPieces";
 import { GameHeader } from "./components/game/GameHeader";
@@ -89,21 +89,27 @@ const {
   const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
   
   const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
-  
-  
+  function conecta(){
+    setJoinOrCreateModal(false);
+    setIsconnected(true);
+  }
+  function desconecta(){
+    setJoinOrCreateModal(true);
+    setIsconnected(false);
+  }
   function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
     setBoard(board);
     setPlayerColor(color);
     setTurn(turn);
     setMoveInfo(status);
+    conecta();
   }
   
   function onConnect() {
     socket.emit('joinGame', { playerName: 'asd' });
-    setJoinOrCreateModal(false);
   }
   function joinedError({message:message}:{message:string}){
-    setJoinOrCreateModal(true);
+    desconecta();
     localStorage.clear();
     socket.disconnect();
     socket.auth = {}
@@ -111,6 +117,8 @@ const {
   }
   function onDisconnect() {
     socket.disconnect();
+    socket.auth = {}
+    desconecta();
   }
 
   socket.on('boardUpdate', ({board, turn, status}:{board:Board,turn:PieceColor,status:string}) => {
@@ -158,10 +166,6 @@ const {
 
   
   // refs para posicionamento do modal de promoção
-  const boardRefs = useRef<(HTMLDivElement | null)[][]>(
-    Array(8).fill(null).map(() => Array(8).fill(null))
-  );
-
   // Previne fechar modais com ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -216,8 +220,8 @@ useEffect(() => {
   }
 
   // Clique no tabuleiro
-  const handleSquareClick = async (row: number, col: number) => {
-    
+  const handleSquareClick = async (position:Position) => {
+      const {row,col} = position;
       if (playerColor && turn !== playerColor) {
         setMoveInfo("Aguarde sua vez.");
         return;
@@ -315,81 +319,14 @@ useEffect(() => {
       handleJoinGame={handleJoinGame}
     />
 
-    <div className="order-1 lg:order-1 w-full lg:w-auto flex flex-row gap-10 items-center">
-      
- 
-        <DeadPieces 
-          deadPieces={deadPieces}
-          pieceSymbols={pieceSymbols}
-          endGameModal={endGameModal}
-        />
-    
-
-      {/* Chess Board & Info */}
-      <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
-        <GameHeader 
-        handleRestart={handleRestart}
-        />
-
-        <div>
-          <div id="board-wrapper" className="flex">
-            {/* Board */}
-            <BoardContainer>
-              {board.map((rowArr, row) =>
-                rowArr.map((piece, col) => {
-                  const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
-                  const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-                  
-                  return <BoardPiece 
-                
-                  row={row}
-                  col={col}
-                  boardRefs={boardRefs}
-                  isHighlight={isHighlight}
-                  isCapture={isCapture}
-                  piece={piece}
-                  handleSquareClick={handleSquareClick}
-                  /> //CODIGO DE TABULEIRO INVERTIDO ABAIXO
-  //                 {(playerColor === "black" ? board.slice().reverse() : board).map((rowArr, rowIdx) =>
-  //   (playerColor === "black" ? rowArr.slice().reverse() : rowArr).map((piece, colIdx) => (
-  //     <BoardPiece
-  //       row={playerColor === "black" ? 7 - rowIdx : rowIdx}
-  //       col={playerColor === "black" ? 7 - colIdx : colIdx}
-  //       boardRefs={boardRefs}
-  //       isHighlight={highlights.some(pos =>
-  //         pos.row === (playerColor === "black" ? 7 - rowIdx : rowIdx) &&
-  //         pos.col === (playerColor === "black" ? 7 - colIdx : colIdx)
-  //       )}
-  //       isCapture={captureHighlights.some(pos =>
-  //         pos.row === (playerColor === "black" ? 7 - rowIdx : rowIdx) &&
-  //         pos.col === (playerColor === "black" ? 7 - colIdx : colIdx)
-  //       )}
-  //       piece={piece}
-  //       handleSquareClick={handleSquareClick}
-  //     />
-  //   )) 
-  // )}
-                })
-              )}
-            </BoardContainer>
-
-            </div>
-            {/* Y Coordinates */}
-            
-          </div>
-          {/* X Coordinates */}
-          <div className="x-coordinates grid grid-cols-8 mt-2 text-lg font-bold text-neutral-800 dark:text-neutral-200 text-center">
-            {["A", "B", "C", "D", "E", "F", "G", "H"].map((l) => (
-              <div key={l}>{l}</div>
-            ))}
-          </div>
-
-          {/* Info Panel */}
-          <div className="info-panel text-center mt-2">
-            <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
-          </div>
-        </div>
-      </div>
+  {isConnected && 
+  <Game
+    handleRestart={handleRestart}
+    handleSquareClick={handleSquareClick}
+    pieceSymbols={pieceSymbols}
+    board={board}
+  />
+  }
 
       {/* Modals */}
       {promotionModal.open && (
