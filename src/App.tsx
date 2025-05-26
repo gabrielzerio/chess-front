@@ -1,380 +1,86 @@
 import React, { useState, useRef, useEffect } from "react";
 import ModalInicio from "./components/modals/Modal";
 import {Game} from './components/game/index'
-import type { PieceColor, PieceType, Position, Piece, Board} from "./types/types";
+import type { PieceColor, PieceType, Position, Piece, Board, IPlayer} from "./types/types";
 import { DeadPieces } from "./components/game/DeadPieces";
 import { GameHeader } from "./components/game/GameHeader";
 import { useUser } from "./UserContext";
 import { BoardPiece } from "./components/game/board/BoardPiece";
 import { BoardContainer } from "./components/game/board/BoardGrid";
 import {socket} from './socket'
+import { criarJogo } from "./api";
 
-interface JoinPayload  {
-  gameId:string,
-  playerName:string
-}
-
-const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
-  rook: { white: "♖", black: "♜" },
-    knight: { white: "♘", black: "♞" },
-    bishop: { white: "♗", black: "♝" },
-    queen: { white: "♕", black: "♛" },
-    king: { white: "♔", black: "♚" },
-    pawn: { white: "p", black:("o") },
-};
-
-const HTTP_API_URL = import.meta.env.VITE_HTTP_API_URL;
-// const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
-
-const initialBoard: (Piece | null)[][] = Array(8)
-  .fill(null)
-  .map(() => Array(8).fill(null));
-
-// async function createGame() {
-//   const response = await fetch(`${HTTP_API_URL}/createGame`, {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' }
-//   });
-//   const data = await response.json();
-//   return data.gameId;
+// interface JoinPayload  {
+//   gameId:string,
+//   playerName:string
 // }
 
-async function deleteGame(gameId: string) {
-  const response = await fetch(`${HTTP_API_URL}/games/${gameId}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  return await response.json();
-}
+// const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
+//   rook: { white: "♖", black: "♜" },
+//     knight: { white: "♘", black: "♞" },
+//     bishop: { white: "♗", black: "♝" },
+//     queen: { white: "♕", black: "♛" },
+//     king: { white: "♔", black: "♚" },
+//     pawn: { white: "p", black:("o") },
+// };
+
+// // const WS_API_URL =  import.meta.env.VITE_WS_API_URL;
 
 
-export const ChessGame: React.FC = () => {
-const {
-  darkMode,
-  setDarkMode,
-  gameId,
-  setGameId,
-  highlights,
-  setHighlights,
-  captureHighlights,
-  setCaptureHighlights,
-  playerColor,
-  setPlayerColor,
-  promotionModal,
-  setPromotionModal,
-  endGameModal,
-  setEndGameModal,
-  joinOrCreateModal,
-  setJoinOrCreateModal,
-  inputPlayerName,
-  setInputPlayerName,
-  JoinInputPlayerName,
-  setJoinInputPlayerName,
-  inputGameId,
-  setInputGameId,
-  turn,
-  setTurn,
-  playerName,
-  setPlayerName,
-  moveInfo, setMoveInfo,
-  deadPieces, setDeadPieces
-} = useUser();
+
+
+
+// export const ChessGame: React.FC = () => {
+
 
   
-  // // Estados principais
-  const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
+//   // // Estados principais
 
-  const [selected, setSelected] = useState<Position | null>(null);
  
-  const [isConnected, setIsconnected] = useState<boolean | null>(socket.connected);
   
-  const [effect, setEffect] = useState(false); // usado para forçar o re-render do componente no effect
-  function conecta(){
-    setJoinOrCreateModal(false);
-    setIsconnected(true);
-  }
-  function desconecta(){
-    setJoinOrCreateModal(true);
-    setIsconnected(false);
-  }
-  function joinedGame({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
-    setBoard(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(status);
-    conecta();
-  }
+
+
+// // useEffect(() => {
+// //     socket.emit('joinGame', { playerName: JoinInputPlayerName || 'aaaa' });
+// // },[isConnected])
+
   
-  function onConnect() {
-    socket.emit('joinGame', { playerName: 'asd' });
-  }
-  function joinedError({message:message}:{message:string}){
-    desconecta();
-    localStorage.clear();
-    socket.disconnect();
-    socket.auth = {}
-    console.log('passa quantas vezes aqui')
-  }
-  function onDisconnect() {
-    socket.disconnect();
-    socket.auth = {}
-    desconecta();
-  }
-
-  socket.on('boardUpdate', ({board, turn, status}:{board:Board,turn:PieceColor,status:string}) => {
-      setBoard(board),
-      setTurn(turn),
-      setMoveInfo(status)
-   })
-
-   function getMySession({gameID, userID}:{gameID:string, userID:string}){ //vai escutar esse session ao clicar em conectar
-      localStorage.setItem('gameID', gameID);
-      localStorage.setItem('userID',userID);
-      socket.auth = {gameID:gameID, userID:userID};
-   }
-
-  useEffect(() => {
-  const userIDLS = localStorage.getItem("userID");
-  const gameIDLS = localStorage.getItem("gameID");
-  const playerNameLS = localStorage.getItem("playerName");
-  socket.connect();
-
-  if (userIDLS && gameIDLS) {
-    socket.auth = { userID: userIDLS, gameID: gameIDLS };
-    socket.connect();
-  }
-  socket.on('session', getMySession);
-  socket.on('connect', onConnect);
-  socket.on('disconnect', onDisconnect);
-  socket.on('joinedGame', joinedGame);
-  socket.on('joinError', joinedError);
-  return () => {
-    socket.off('connect', onConnect);
-    socket.off('disconnect', onDisconnect);
-    socket.off('boardUpdate');
-    socket.off('session', getMySession);
-    socket.off('joinedGame', joinedGame);
-    socket.off('joinError', joinedError);
-  };
-}, [effect]);
+//   // refs para posicionamento do modal de promoção
+//   // Previne fechar modais com ESC
+//   useEffect(() => {
+//     const handler = (e: KeyboardEvent) => {
+//       if ( promotionModal.open || endGameModal.open) {
+//         if (e.key === "Escape") e.preventDefault();
+//       }
+//     };
+//     window.addEventListener("keydown", handler);
+//     return () => window.removeEventListener("keydown", handler);
+//   }, [ promotionModal.open, endGameModal.open]);
 
 
 
 // useEffect(() => {
-//     socket.emit('joinGame', { playerName: JoinInputPlayerName || 'aaaa' });
-// },[isConnected])
+//   const root = window.document.documentElement;
+//   if (darkMode) {
+//     root.classList.add('dark');
+//   } else {
+//     root.classList.remove('dark');
+//   }
+// }, [darkMode]);
 
-  
-  // refs para posicionamento do modal de promoção
-  // Previne fechar modais com ESC
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ( promotionModal.open || endGameModal.open) {
-        if (e.key === "Escape") e.preventDefault();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [ promotionModal.open, endGameModal.open]);
+// // 4. Tocar som de game over
 
 
 
-useEffect(() => {
-  const root = window.document.documentElement;
-  if (darkMode) {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
-}, [darkMode]);
 
-// 4. Tocar som de game over
-useEffect(() => {
-  if (!endGameModal.open) return;
-  new Audio("/sounds/gameover.mp3").play();
-}, [endGameModal.open]);
+//   return (
+//     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
+//         {/* <button onClick={() => setDarkMode(!darkMode)}
+//           className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
+//         bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
+//         {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
+//         </button> */}
 
-  
-  // Utilitário: remove destaques
-  const removeHighlight = () => {
-    setHighlights([]);
-    setCaptureHighlights([]);
-  };
+      
 
-  function handleCreateGame(){
-    // socket.connect();
-    setEffect(!effect);
-    // socket.emit('requestGameAndUserID', createGame); //callback
-  }
-
-  function handleJoinGame(){
-    socket.auth = {gameID:inputGameId};
-    socket.connect();
-  }
-
-  function handleRestart(){
-    socket.disconnect();
-    socket.auth = {}
-    localStorage.clear();
-    setJoinOrCreateModal(true);
-  }
-
-  // Clique no tabuleiro
-  const handleSquareClick = async (position:Position) => {
-      const {row,col} = position;
-      if (playerColor && turn !== playerColor) {
-        setMoveInfo("Aguarde sua vez.");
-        return;
-      } 
-      setMoveInfo(`Clicou em ${String.fromCharCode(65 + col)}${8 - row}`);
-    if (selected && (selected.row !== row || selected.col !== col)) {
-      if (playerColor && turn === playerColor) {
-        const piece = board[selected.row][selected.col];
-        // Verifica se é um peão chegando na última linha
-        if (
-          piece &&
-          piece.type === "pawn" &&
-          ((piece.color === "white" && row === 0) ||
-            (piece.color === "black" && row === 7))
-        ) {
-          // Abre o modal e espera a escolha
-          const promotionType = await showPromotionDialog(piece.color, { row, col });
-          sendMove(selected, { row, col }, promotionType);
-        } else {
-          sendMove(selected, { row, col });
-        }
-      } 
-      setSelected(null);
-      removeHighlight();
-    } else {
-      setSelected({ row, col });
-      // NOVO: buscar movimentos possíveis do back-end
-      console.log("cor do jgoador atual", playerColor)
-      if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-
-        socket.emit('requestPossibleMoves', {from:{row,col}}, (response) => { //utilização de callback
-          setHighlights(response.normalMoves);
-          setCaptureHighlights(response.captureMoves);
-          console.log(response)
-        })   
-
-      } else {
-        removeHighlight();
-        
-      }
-    }
-  };
-  
-  
-  // Função para enviar movimento ao servidor (corrigida)
-  function sendMove(from: Position, to: Position, promotionType?: PieceType) {
-    if (!playerColor) {
-      setMoveInfo("Você não está em uma partida ativa.");
-      return;
-    }
-    socket?.emit('makeMove', {from, to, promotionType, playerName:playerName });
-  }
-
-  // Modal de promoção
-  const showPromotionDialog = (color: PieceColor, position: Position) => {
-    const square = boardRefs.current[position.row][position.col];
-    const squareRect = square?.getBoundingClientRect();
-    setPromotionModal({ open: true, color, position, squareRect });
-    return new Promise<PieceType>((resolve) => {
-      // handlerPromotion resolve a promise
-      const handlerPromotion = (type: PieceType) => {
-        setPromotionModal({ open: false });
-        resolve(type);
-      };
-      (window as any).handlePromotion = handlerPromotion;
-    });
-  };
-
-  // Modal de promoção: handler
-  const handlePromotion = (type: PieceType) => {
-    setPromotionModal({ open: false });
-    if ((window as any).handlePromotion) (window as any).handlePromotion(type);
-  };
-
- 
-  const cleanStates = () => {
-    setInputPlayerName("");
-    setInputGameId("");
-    setJoinInputPlayerName("");
-  }
-
-  // Novo: fluxo para criar jogo
-
-
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
-        {/* <button onClick={() => setDarkMode(!darkMode)}
-          className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
-        bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
-        {darkMode ? "Modo Claro ☀️" : "Modo Escuro 🌙"}
-        </button> */}
-
-    <ModalInicio
-      handleCreateGame={handleCreateGame}
-      handleJoinGame={handleJoinGame}
-    />
-
-  {isConnected && 
-  <Game
-    handleRestart={handleRestart}
-    handleSquareClick={handleSquareClick}
-    pieceSymbols={pieceSymbols}
-    board={board}
-  />
-  }
-
-      {/* Modals */}
-      {promotionModal.open && (
-        <div
-          className="fixed z-50"
-          style={{
-            left: promotionModal.squareRect?.left,
-            top: promotionModal.color === "white"
-              ? (promotionModal.squareRect?.top ?? 0) - 60
-              : (promotionModal.squareRect?.bottom ?? 0),
-            position: "absolute"
-          }}
-        >
-          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-700 dark:border-yellow-500 rounded-lg p-6 shadow-lg">
-            <h2 className="font-serif text-xl font-bold mb-4">Escolha uma peça para promoção</h2>
-            <div className="flex gap-4 justify-center">
-              {(["queen", "rook", "bishop", "knight"] as PieceType[]).map((type) => (
-                <button
-                  key={type}
-                  className="text-3xl w-12 h-12 p-1 cursor-pointer bg-yellow-100 dark:bg-yellow-800 border border-yellow-700 rounded hover:bg-yellow-700 hover:text-yellow-100 dark:hover:bg-yellow-500 dark:hover:text-neutral-900"
-                  onClick={() => handlePromotion(type)}
-                >
-                  {pieceSymbols[type][promotionModal.color!]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* End Game Modal */}
-      {endGameModal.open && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
-            <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-            <p id="winnerMessage">{endGameModal.winner}</p>
-            <button
-              className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
-              // onClick={() => handleRestart(null)}
-            >
-              Encerrar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-);
-
-};
-
-export default ChessGame;
+// export default ChessGame;

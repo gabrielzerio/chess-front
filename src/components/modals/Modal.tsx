@@ -2,14 +2,38 @@
 // import { useUser } from "./UserContext";
 // import type { UserContextType } from "./types/ContextType";
 
+import { useNavigate } from "react-router-dom";
+import { criarJogo } from "../../api";
 import { useUser } from "../../UserContext";
-type ChildProps = {
-  handleCreateGame: () => Promise<void>
-  handleJoinGame: () => Promise<void>
-}
+import { socket } from "../../socket";
 
-function ModalInicio({handleCreateGame, handleJoinGame}: ChildProps) {
+function ModalInicio() {
   const contexto = useUser();
+  const navigate = useNavigate();
+  
+     async function handleCreateGame(){
+      if(!contexto.inputPlayerName)
+        return;
+
+      const playerInfos = await criarJogo(contexto.inputPlayerName); //retorna IPlayer
+      if(!playerInfos.gameID || !playerInfos.playerID ){
+        return
+      }
+
+      contexto.setPlayerName(contexto.inputPlayerName);
+      contexto.setGameID(playerInfos.gameID);
+      contexto.setPlayerID(playerInfos.playerID);
+      contexto.setTurn('black')
+      console.log(playerInfos)
+      navigate("/game");
+    }
+
+    async function handleJoinGame(){
+
+    }
+
+
+
 
 return (
   contexto.joinOrCreateModal && (
@@ -37,8 +61,8 @@ return (
           <h3 className="font-bold mb-2 text-lg">Entrar em jogo existente</h3>
           <input
             className="border-2 border-neutral-800 dark:border-yellow-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded px-4 py-2 mb-2 w-full"
-            value={contexto.inputGameId}
-            onChange={e => contexto.setInputGameId(e.target.value)}
+            value={contexto.inputGameID}
+            onChange={e => contexto.setInputGameID(e.target.value)}
             placeholder="ID do jogo"
           />
           <input

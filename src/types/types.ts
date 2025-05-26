@@ -7,3 +7,10 @@ export interface Piece {
   position: Position;
 }
 export type Board = (Piece | null)[][];
+
+export interface IPlayer {
+  playerName?:string;
+  playerID:string;
+  gameID:string;
+  color?:PieceColor;
+}
