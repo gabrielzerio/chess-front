@@ -1,12 +1,15 @@
 import { useUser } from "../../UserContext";
 import { DivGameId } from "../game/GameId"
+import { useNavigate } from "react-router-dom";
 
-type ChildProps = {
-  handleRestart:(status: string | null) => void;
-}
-
-export function GameHeader({handleRestart}:ChildProps){
-const contexto = useUser();
+export function GameHeader(){
+  const navigate = useNavigate();
+  function handleRestart(operacao:string){
+    if(operacao==='leave'){
+      navigate('/');
+    }
+  }
+  const contexto = useUser();
     return (
         <div className="flex flex-row w-screen h-25 sm:h-15 md:items-center md:w-[800px] bg-yellow-200 dark:bg-yellow-900 shadow-lg rounded-xl px-4 py-2 border border-yellow-600 dark:border-yellow-700">
             

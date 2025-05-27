@@ -6,6 +6,7 @@ import { BoardPiece } from "./board/BoardPiece";
 import { DeadPieces } from "./DeadPieces";
 import { GameHeader } from "./GameHeader";
 import { socket } from "../../socket";
+import { Socket } from "socket.io-client";
 
 interface IHightlights {
   highlights: Position[];
@@ -30,7 +31,7 @@ export function Game() {
     .map(() => Array(8).fill(null));
 
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
-
+  const [sockett, setSocket] = useState<Socket>(socket);
   const [selected, setSelected] = useState<Position | null>(null);
 
   const {
@@ -62,27 +63,36 @@ export function Game() {
 
   
 
+  function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
+  setBoard(board);
+  setPlayerColor(color);
+  setTurn(turn);
+  setMoveInfo(status);
+}
+function handleConnect(){
+  socket.emit('joinGame');
+}
   useEffect(() => {
     if(!gameID || !playerID){
-      console.log(gameID, playerID)
-     return;
+      return;
     }
+    console.log(gameID, playerID)
     const playerInfos:IPlayer = {gameID:gameID, playerID:playerID};
     socket.auth = playerInfos;
     
-    socket.connect();
-
-    function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
-    setBoard(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(status);
-  }
-  if(socket.connected){
-      socket.emit('joinGame', handleJoined);
-  }
+    if(socket.disconnected){
+      socket.connect();
+    }
     
-  },)
+  
+  socket.on('connect', handleConnect);
+  socket.on('joinedGame', handleJoined);
+    return () => {
+      socket.off("joinedGame", handleJoined);
+      socket.off("connect", handleConnect);
+      socket.disconnect();
+    }
+  },[gameID, playerID])
   
   // Utilitário: remove destaques
   const removeHighlight = () => {

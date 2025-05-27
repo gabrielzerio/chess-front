@@ -5,7 +5,6 @@
 import { useNavigate } from "react-router-dom";
 import { criarJogo } from "../../api";
 import { useUser } from "../../UserContext";
-import { socket } from "../../socket";
 
 function ModalInicio() {
   const contexto = useUser();
@@ -24,7 +23,7 @@ function ModalInicio() {
       contexto.setGameID(playerInfos.gameID);
       contexto.setPlayerID(playerInfos.playerID);
       contexto.setTurn('black')
-      console.log(playerInfos)
+      
       navigate("/game");
     }
 
