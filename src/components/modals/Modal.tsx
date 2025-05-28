@@ -3,7 +3,7 @@
 // import type { UserContextType } from "./types/ContextType";
 
 import { useNavigate } from "react-router-dom";
-import { criarJogo } from "../../api";
+import { createGame, joinGame } from "../../api";
 import { useUser } from "../../UserContext";
 
 function ModalInicio() {
@@ -14,7 +14,7 @@ function ModalInicio() {
       if(!contexto.inputPlayerName)
         return;
 
-      const playerInfos = await criarJogo(contexto.inputPlayerName); //retorna IPlayer
+      const playerInfos = await createGame(contexto.inputPlayerName); //retorna IPlayer
       if(!playerInfos.gameID || !playerInfos.playerID ){
         return
       }
@@ -22,13 +22,26 @@ function ModalInicio() {
       contexto.setPlayerName(contexto.inputPlayerName);
       contexto.setGameID(playerInfos.gameID);
       contexto.setPlayerID(playerInfos.playerID);
-      contexto.setTurn('black')
+      
       
       navigate("/game");
     }
 
     async function handleJoinGame(){
-
+      if(!contexto.JoinInputPlayerName)
+        return;
+      if(!contexto.inputGameID){
+        return;
+      }
+      console.log(contexto.JoinInputPlayerName, contexto.inputGameID)
+      const playerInfos = await joinGame(contexto.JoinInputPlayerName, contexto.inputGameID); //retorna IPlayer
+      if(!playerInfos.gameID || !playerInfos.playerID ){
+        return
+      }
+      contexto.setPlayerName(contexto.JoinInputPlayerName);
+      contexto.setGameID(playerInfos.gameID);
+      contexto.setPlayerID(playerInfos.playerID);
+      navigate("/game");
     }
 
 

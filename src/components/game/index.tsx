@@ -6,11 +6,10 @@ import { BoardPiece } from "./board/BoardPiece";
 import { DeadPieces } from "./DeadPieces";
 import { GameHeader } from "./GameHeader";
 import { socket } from "../../socket";
-import { Socket } from "socket.io-client";
 
 interface IHightlights {
-  highlights: Position[];
-  captureHightlights: Position[];
+  normalMoves: Position[];
+  captureMoves: Position[];
 }
 
 const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
@@ -31,7 +30,6 @@ export function Game() {
     .map(() => Array(8).fill(null));
 
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
-  const [sockett, setSocket] = useState<Socket>(socket);
   const [selected, setSelected] = useState<Position | null>(null);
 
   const {
@@ -53,7 +51,7 @@ export function Game() {
     highlights,
     setMoveInfo,
     playerID,
-    gameID, 
+    gameID,
   } = useUser();
 
   useEffect(() => {
@@ -61,39 +59,45 @@ export function Game() {
     new Audio("/sounds/gameover.mp3").play();
   }, [endGameModal.open]);
 
-  
+
 
   function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
-  setBoard(board);
-  setPlayerColor(color);
-  setTurn(turn);
-  setMoveInfo(status);
-}
-function handleConnect(){
-  socket.emit('joinGame');
-}
+    setBoard(board);
+    setPlayerColor(color);
+    setTurn(turn);
+    setMoveInfo(status);
+  }
+  function handleConnect() {
+    socket.emit('joinGame');
+  }
+  function handleBoardUpdate({ board, turn, status }: { board: Board, turn: PieceColor, status: string }) {
+    setBoard(board);
+    setTurn(turn);
+    setMoveInfo(status);
+  }
   useEffect(() => {
-    if(!gameID || !playerID){
+    if (!gameID || !playerID) {
       return;
     }
     console.log(gameID, playerID)
-    const playerInfos:IPlayer = {gameID:gameID, playerID:playerID};
+    const playerInfos: IPlayer = { gameID: gameID, playerID: playerID };
     socket.auth = playerInfos;
-    
-    if(socket.disconnected){
+
+    if (socket.disconnected) {
       socket.connect();
     }
-    
-  
-  socket.on('connect', handleConnect);
-  socket.on('joinedGame', handleJoined);
+
+    socket.on('connect', handleConnect);
+    socket.on('joinedGame', handleJoined);
+    socket.on('boardUpdate', handleBoardUpdate);
     return () => {
       socket.off("joinedGame", handleJoined);
       socket.off("connect", handleConnect);
+      socket.off('boardUpdate', handleBoardUpdate);
       socket.disconnect();
     }
-  },[gameID, playerID])
-  
+  }, [gameID, playerID])
+
   // Utilitário: remove destaques
   const removeHighlight = () => {
     setHighlights([]);
@@ -135,8 +139,8 @@ function handleConnect(){
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
 
         socket.emit('requestPossibleMoves', { from: { row, col } }, (response: IHightlights) => { //utilização de callback
-          setHighlights(response.highlights);
-          setCaptureHighlights(response.captureHightlights);
+          setHighlights(response.normalMoves);
+          setCaptureHighlights(response.captureMoves);
           console.log(response)
         })
 
@@ -178,9 +182,7 @@ function handleConnect(){
     if ((window as any).handlePromotion) (window as any).handlePromotion(type);
   };
 
-  function handleRestart() {
 
-  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
@@ -202,7 +204,6 @@ function handleConnect(){
         {/* Chess Board & Info */}
         <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
           <GameHeader
-            handleRestart={handleRestart}
           />
 
           <div>
