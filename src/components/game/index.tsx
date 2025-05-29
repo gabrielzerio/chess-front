@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import type { PieceType, PieceColor, Piece, Position, IPlayer, Board } from "../../types/types";
+import type { PieceType, PieceColor, Piece, Position} from "../../types/types";
 import { useUser } from "../../UserContext";
 import { BoardContainer } from "./board/BoardGrid";
 import { BoardPiece } from "./board/BoardPiece";
 import { DeadPieces } from "./DeadPieces";
 import { GameHeader } from "./GameHeader";
 import { socket } from "../../socket";
-
+import { useSocketListeners } from "../../socketHandler";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 interface IHightlights {
   normalMoves: Position[];
   captureMoves: Position[];
@@ -31,7 +33,7 @@ export function Game() {
 
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
   const [selected, setSelected] = useState<Position | null>(null);
-
+  
   const {
     // darkMode,
     // setDarkMode,
@@ -53,51 +55,33 @@ export function Game() {
     playerID,
     gameID,
   } = useUser();
-
+  
   useEffect(() => {
     if (!endGameModal.open) return;
     new Audio("/sounds/gameover.mp3").play();
   }, [endGameModal.open]);
-
-
-
-  function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
-    setBoard(board);
-    setPlayerColor(color);
-    setTurn(turn);
-    setMoveInfo(status);
-  }
-  function handleConnect() {
-    socket.emit('joinGame');
-  }
-  function handleBoardUpdate({ board, turn, status }: { board: Board, turn: PieceColor, status: string }) {
-    setBoard(board);
-    setTurn(turn);
-    setMoveInfo(status);
-  }
-  useEffect(() => {
-    if (!gameID || !playerID) {
-      return;
-    }
-    console.log(gameID, playerID)
-    const playerInfos: IPlayer = { gameID: gameID, playerID: playerID };
-    socket.auth = playerInfos;
-
-    if (socket.disconnected) {
-      socket.connect();
-    }
-
-    socket.on('connect', handleConnect);
-    socket.on('joinedGame', handleJoined);
-    socket.on('boardUpdate', handleBoardUpdate);
-    return () => {
-      socket.off("joinedGame", handleJoined);
-      socket.off("connect", handleConnect);
-      socket.off('boardUpdate', handleBoardUpdate);
-      socket.disconnect();
-    }
-  }, [gameID, playerID])
-
+  
+  
+  
+  // function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
+    //   setBoard(board);
+    //   setPlayerColor(color);
+    //   setTurn(turn);
+    //   setMoveInfo(status);
+    // }
+    // function handleConnect() {
+      //   socket.emit('joinGame');
+      // }
+      // function handleBoardUpdate({ board, turn, status }: { board: Board, turn: PieceColor, status: string }) {
+        //   setBoard(board);
+        //   setTurn(turn);
+        //   setMoveInfo(status);
+        // }
+        
+  
+  
+  useSocketListeners(socket, setBoard);
+  
   // Utilitário: remove destaques
   const removeHighlight = () => {
     setHighlights([]);
@@ -185,7 +169,10 @@ export function Game() {
 
 
   return (
+    
     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
+    
+      
       {/* <button onClick={() => setDarkMode(!darkMode)}
 //           className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
 //         bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">
@@ -224,6 +211,7 @@ export function Game() {
                       isCapture={isCapture}
                       piece={piece}
                       handleSquareClick={handleSquareClick} />
+                      
                     //CODIGO DE TABULEIRO INVERTIDO ABAIXO
                     //                 {(playerColor === "black" ? board.slice().reverse() : board).map((rowArr, rowIdx) =>
                     //   (playerColor === "black" ? rowArr.slice().reverse() : rowArr).map((piece, colIdx) => (

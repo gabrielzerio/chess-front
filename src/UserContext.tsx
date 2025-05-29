@@ -24,7 +24,7 @@ import type { Piece, PieceColor, Position } from './types/types';
   //   const [darkMode, setDarkMode] = useState(true);
   */}
 
-type UserContextType = {
+interface UserContextType {
   darkMode: boolean;
   setDarkMode: (value: boolean) => void;
 
@@ -70,6 +70,9 @@ type UserContextType = {
   playerID: string|null;
   setPlayerID: (id:string) => void;
 
+  gameStatus: string|null;
+  setGameStatus: (status:string) => void;
+
   // ...existing code...
 deadPieces: { white: Piece[]; black: Piece[] };
 setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
@@ -95,6 +98,9 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
   const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
   const [playerID, setPlayerID] = useState<string|null>(null);
+  const [gameStatus, setGameStatus] = useState<string|null>(null);
+
+
   return (
     <UserContext.Provider value={{
       darkMode, setDarkMode,
@@ -113,6 +119,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
       moveInfo, setMoveInfo,
       deadPieces, setDeadPieces,
       playerID, setPlayerID,
+      gameStatus, setGameStatus,
     }}>
       {children}
     </UserContext.Provider>

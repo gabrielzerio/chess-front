@@ -22,10 +22,8 @@ function ModalInicio() {
       contexto.setPlayerName(contexto.inputPlayerName);
       contexto.setGameID(playerInfos.gameID);
       contexto.setPlayerID(playerInfos.playerID);
-      
-      
       navigate("/game");
-    }
+     }
 
     async function handleJoinGame(){
       if(!contexto.JoinInputPlayerName)
