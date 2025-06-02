@@ -79,7 +79,6 @@ export function Game() {
         // }
         
   
-  
   useSocketListeners(socket, setBoard);
   
   // Utilitário: remove destaques
@@ -173,6 +172,7 @@ export function Game() {
     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
     
       
+        <ToastContainer />
       {/* <button onClick={() => setDarkMode(!darkMode)}
 //           className="absolute bottom-4 md:-bottom-0 right-4 z-50 px-4 py-2 rounded-lg font-bold text-sm
 //         bg-neutral-800 text-white hover:bg-yellow-400 hover:text-black dark:bg-yellow-500 dark:text-black dark:hover:bg-neutral-800 dark:hover:text-white">

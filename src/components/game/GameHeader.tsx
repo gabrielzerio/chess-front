@@ -7,6 +7,7 @@ export function GameHeader(){
   function handleRestart(operacao:string){
     if(operacao==='leave'){
       navigate('/');
+      localStorage.clear();
     }
   }
   const contexto = useUser();
