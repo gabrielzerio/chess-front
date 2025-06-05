@@ -13,14 +13,14 @@ type Login = {
 };
 type GameStatus = 'waiting' | 'playing' | 'ended' | 'checkmate' | 'paused_reconnect' | 'abandoned';
 type IPausedForReconection = {
-    disconnectedPlayerID: string;
+    disconnectedPlayerName: string;
     gameStatus: GameStatus;
     timeLeft: number;
 }
 interface IHandleJoinedOrReconnected {
     message?:'string'
     board: Board,
-    color?: PieceColor,
+    color: PieceColor,
     turn: PieceColor,
     status: string
 }
@@ -31,7 +31,9 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         setTurn,
         setMoveInfo,
         gameID,
+        setGameID,
         playerID,
+        setPlayerID,
         gameStatus,
         setGameStatus,
         setEndGameModal
@@ -77,6 +79,8 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         if (!playerID || !gameID) {
             return;
         }
+        setPlayerID(playerID);
+        setGameID(gameID);
         const playerInfos: IPlayer = { gameID: gameID, playerID: playerID };
         socket.auth = playerInfos;
 
@@ -108,22 +112,20 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         // function handlePlayersUpdate() {
         //     toast(`O jogador saiu`);
         // }
-        function handlePausedForReconnect({ disconnectedPlayerID, gameStatus, timeLeft }: IPausedForReconection) {
-            toast('Status do jogo foi alterado')
-            toast(`O jogador saiu, tempo restante para desistencia! ${timeLeft / 1000} segundos`);
+        function handlePausedForReconnect({ disconnectedPlayerName, gameStatus, timeLeft }: IPausedForReconection) {
+            // toast('Status do jogo foi alterado')
+            toast(`O jogador ${disconnectedPlayerName} saiu, tempo restante para finalizacao! ${timeLeft / 1000} segundos`);
         }
         function handleGameOver() {
             setEndGameModal({ open: true, winner: "gabriel" });
         }
-        function handleReconnected({ message, board, color, turn, status }:IHandleJoinedOrReconnected) {
-            toast(message);
-            setBoard(board);
-            setPlayerColor(color ? color : null);
-            setTurn(turn);
-            setGameStatus(status);
-        }
-        function handleMessageReconnected({playerName}:{playerName:string}){
-            toast(`${playerName} foi reconectado`);
+        
+        function handleMessageReconnected({playerID:emitPlayerID, playerName:emitPlayerName}:{playerID:string, playerName:string}){
+            if(playerID === emitPlayerID){
+                toast(`você reconectou`);
+            }else{
+                toast(`${emitPlayerName} se reconectou`);
+            }
         }
         socket.on('connect', handleConnect);
         socket.on('joinedGame', handleJoined);
@@ -136,7 +138,6 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         // socket.on('playersUpdate', handlePlayersUpdate);
         socket.on('gamePausedForReconnect', handlePausedForReconnect);
         socket.on('gameOver', handleGameOver);
-        socket.on('reconnected', handleReconnected)
         socket.on('playerReconnected', handleMessageReconnected);
         return () => {
             socket.off("joinedGame", handleJoined);
@@ -148,7 +149,6 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
             // socket.off('playersUpdate', handlePlayersUpdate);
             socket.off('gamePausedForReconnect', handlePausedForReconnect);
             socket.off('gameOver', handleGameOver);
-            socket.off('reconnected', handleReconnected);
             socket.off('playerReconnected', handleMessageReconnected);
 
             socket.disconnect();

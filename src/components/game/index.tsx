@@ -9,6 +9,7 @@ import { socket } from "../../socket";
 import { useSocketListeners } from "../../socketHandler";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
+import { useUserFunctions } from "../../UserFunctionsContext";
 interface IHightlights {
   normalMoves: Position[];
   captureMoves: Position[];
@@ -56,6 +57,9 @@ export function Game() {
     gameID,
   } = useUser();
   
+  const {handleLeaveAndReset} = useUserFunctions();
+
+
   useEffect(() => {
     if (!endGameModal.open) return;
     new Audio("/sounds/gameover.mp3").play();
@@ -141,6 +145,7 @@ export function Game() {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
+    console.log('mandsadasjasejaesjeas');
     socket?.emit('makeMove', { from, to, promotionType, playerName: playerName });
   }
 
@@ -287,10 +292,10 @@ export function Game() {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
             <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-            <p id="winnerMessage">{endGameModal.winner}</p>
+            <p id="winnerMessage">O Vencedor foi {endGameModal.winner}</p>
             <button
               className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
-            // onClick={() => handleRestart(null)}
+            onClick={() => handleLeaveAndReset()}
             >
               Encerrar
             </button>

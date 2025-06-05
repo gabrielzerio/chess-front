@@ -5,11 +5,26 @@
 import { useNavigate } from "react-router-dom";
 import { createGame, joinGame } from "../../api";
 import { useUser } from "../../UserContext";
+import { useEffect } from "react";
+import type { IPlayer } from "../../types/types";
+import { useUserFunctions } from "../../UserFunctionsContext";
 
 function ModalInicio() {
   const contexto = useUser();
+  const {handleAttemptReconnect} = useUserFunctions();
   const navigate = useNavigate();
   
+      useEffect(() => {
+        async function attemptConection(){
+         const status = await handleAttemptReconnect();
+         if(status === "ok"){
+          navigate("/game");
+         }
+        }
+        attemptConection();
+        
+      },[])
+
      async function handleCreateGame(){
       if(!contexto.inputPlayerName)
         return;
@@ -31,8 +46,8 @@ function ModalInicio() {
       if(!contexto.inputGameID){
         return;
       }
-      console.log(contexto.JoinInputPlayerName, contexto.inputGameID)
-      const playerInfos = await joinGame(contexto.JoinInputPlayerName, contexto.inputGameID); //retorna IPlayer
+      const player:Omit<IPlayer, "playerID"> = {playerName:contexto.JoinInputPlayerName, gameID:contexto.inputGameID};
+      const playerInfos = await joinGame(player); //retorna IPlayer
       if(!playerInfos.gameID || !playerInfos.playerID ){
         return
       }
