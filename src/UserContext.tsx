@@ -1,5 +1,5 @@
 import { createContext, useState, useContext } from 'react';
-import type { Piece, PieceColor, Position } from './types/types';
+import type { IHandleGameOver, Piece, PieceColor, Position } from './types/types';
 
 interface UserContextType {
   darkMode: boolean;
@@ -20,8 +20,8 @@ interface UserContextType {
   promotionModal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect };
   setPromotionModal: (modal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }) => void;
 
-  endGameModal: { open: boolean; winner?: string };
-  setEndGameModal: (modal: { open: boolean; winner?: string }) => void;
+  endGameModal: { open: boolean; winner?: IHandleGameOver };
+  setEndGameModal: (modal: { open: boolean; winner?: IHandleGameOver }) => void;
 
   inputPlayerName: string;
   setInputPlayerName: (name: string) => void;
@@ -64,7 +64,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
   const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
   const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>({ open: false });
-  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: string }>({ open: false });
+  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: IHandleGameOver }>({ open: false });
   const [inputPlayerName, setInputPlayerName] = useState<string>("");
   const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>("");
   const [inputGameID, setInputGameID] = useState<string>("");

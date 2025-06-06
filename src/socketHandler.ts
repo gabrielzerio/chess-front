@@ -2,41 +2,21 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
-import type { Board, IPlayer, Piece, PieceColor } from "./types/types";
+import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, IPlayer, Login, Piece } from "./types/types";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-
-type Login = {
-    playerID?: string;
-    gameID?: string;
-    success: boolean;
-};
-type GameStatus = 'waiting' | 'playing' | 'ended' | 'checkmate' | 'paused_reconnect' | 'abandoned';
-type IPausedForReconection = {
-    disconnectedPlayerName: string;
-    gameStatus: GameStatus;
-    timeLeft: number;
-}
-interface IHandleJoinedOrReconnected {
-    message?:'string'
-    board: Board,
-    color: PieceColor,
-    turn: PieceColor,
-    status: string
-}
 
 export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>) {
     const {
         setPlayerColor,
         setTurn,
-        setMoveInfo,
         gameID,
         setGameID,
         playerID,
         setPlayerID,
-        gameStatus,
         setGameStatus,
-        setEndGameModal
+        setEndGameModal,
+        darkMode
     } = useUser();
     const navigate = useNavigate()
 
@@ -84,7 +64,7 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         const playerInfos: IPlayer = { gameID: gameID, playerID: playerID };
         socket.auth = playerInfos;
 
-        function handleJoined({ board, color, turn, status }:IHandleJoinedOrReconnected) {
+        function handleJoined({ board, color, turn, status }: IHandleJoinedOrReconnected) {
             setBoard(board);
             setPlayerColor(color);
             setTurn(turn);
@@ -109,21 +89,36 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         if (socket.disconnected) {
             socket.connect();
         }
-        // function handlePlayersUpdate() {
-        //     toast(`O jogador saiu`);
-        // }
-        function handlePausedForReconnect({ disconnectedPlayerName, gameStatus, timeLeft }: IPausedForReconection) {
-            // toast('Status do jogo foi alterado')
-            toast(`O jogador ${disconnectedPlayerName} saiu, tempo restante para finalizacao! ${timeLeft / 1000} segundos`);
+        function handlePausedForReconnect({ disconnectedPlayerName, timeLeft }: IPausedForReconection) {
+            let secondsLeft = Math.ceil(timeLeft / 1000);
+            // Cria o toast e guarda o id
+            const toastId = toast.loading(
+                `O jogador ${disconnectedPlayerName} saiu, tempo restante para finalização: ${secondsLeft} segundos`,
+                { theme:darkMode ? "dark" : "light" }
+            );
+
+            // Atualiza o toast a cada segundo
+            const interval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft > 0) {
+                    toast.update(toastId, {
+                        render: `O jogador ${disconnectedPlayerName} saiu, tempo restante para finalização: ${secondsLeft} segundos`
+                    });
+                } else {
+                    clearInterval(interval);
+                    toast.dismiss(toastId);
+                }
+            }, 1000);
         }
-        function handleGameOver() {
-            setEndGameModal({ open: true, winner: "gabriel" });
+        function handleGameOver(data: IHandleGameOver) {
+
+            setEndGameModal({ open: true, winner: data });
         }
-        
-        function handleMessageReconnected({playerID:emitPlayerID, playerName:emitPlayerName}:{playerID:string, playerName:string}){
-            if(playerID === emitPlayerID){
+
+        function handleMessageReconnected({ playerID: emitPlayerID, playerName: emitPlayerName }: { playerID: string, playerName: string }) {
+            if (playerID === emitPlayerID) {
                 toast(`você reconectou`);
-            }else{
+            } else {
                 toast(`${emitPlayerName} se reconectou`);
             }
         }
