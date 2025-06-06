@@ -1,4 +1,4 @@
-import type { Piece } from "../../../types/types";
+import type { Piece, Position } from "../../../types/types";
 
 type ChildProps = {
   row: number;
@@ -7,12 +7,15 @@ type ChildProps = {
   isHighlight: boolean;
   isCapture: boolean;
   piece: Piece | null;
-  handleSquareClick: (row: number, col: number) => Promise<void>
+  handleSquareClick: (position:Position) => Promise<void>
 }
 function getPieceImage(piece: Piece | null): string | null {
   if (!piece) return "";
   return `/pieces/${piece.color}_${piece.type}.svg`;
 }
+// ${isHighlight ? "!bg-green-500 dark:!bg-green-700" : ""}
+//                         ${isCapture ? "!bg-red-500 dark:!bg-red-700" : ""}`}
+
 export function BoardPiece({ row, col, boardRefs, isHighlight, isCapture, piece, handleSquareClick }: ChildProps) {
   const imgSrc = getPieceImage(piece)
   return (
@@ -20,15 +23,19 @@ export function BoardPiece({ row, col, boardRefs, isHighlight, isCapture, piece,
       className={`flex items-center justify-center relative
                         ${(row + col) % 2 === 0 ? "bg-yellow-100 dark:bg-yellow-800" : "bg-yellow-700 dark:bg-yellow-600"} 
                         cursor-pointer transition
-                        ${isHighlight ? "!bg-green-500 dark:!bg-green-700" : ""}
-                        ${isCapture ? "!bg-red-500 dark:!bg-red-700" : ""}`}
-      onClick={() => handleSquareClick(row, col)}>
-
+                        `}
+      onClick={() => handleSquareClick({row, col} as Position)}>
+        {isHighlight && (
+          <div id='hint' className="rounded-[50%] !bg-green-500 dark:!bg-green-700 w-[50%] h-[50%]"></div>
+        )}
+        {/* {isCapture && (
+          <div className="rounded-[50%] !bg-red-500 dark:!bg-red-700 w-[50%] h-[50%] "></div>
+        )} */}
       {imgSrc && (
         <img
           src={imgSrc}
           alt={`${piece?.color} ${piece?.type}`}
-          className="select-none pointer-events-none sm:w-[70%] sm:h-[70%] object-contain"
+          className={`select-none pointer-events-none sm:w-[70%] sm:h-[70%] object-contain rounded-[50%] ${isCapture ? "!bg-red-500 dark:!bg-red-700" : ""}`}
           draggable={false}
         />)}
 

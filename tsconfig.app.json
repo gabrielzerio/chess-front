@@ -17,8 +17,8 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": false, //alterar para true após testar o build
-    "noUnusedParameters": false, //alterar para true após testar o build
+    "noUnusedLocals": true, //alterar para true após testar o build
+    "noUnusedParameters": true, //alterar para true após testar o build
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true

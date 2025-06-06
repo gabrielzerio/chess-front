@@ -1,35 +1,12 @@
-import { createContext, useState, useContext, useRef } from 'react';
-import type { Piece, PieceColor, Position } from './types/types';
+import { createContext, useState, useContext } from 'react';
+import type { IHandleGameOver, Piece, PieceColor, Position } from './types/types';
 
-{/*
-   
-   // const [inputPlayerName, setInputPlayerName] = useState<string>(""); // usado no input do nome no modal quando cria uma sala
-   // const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>(""); // usado no input do nome quando vai entrar em sala existente no modal
-   // const [inputGameId, setInputGameId] = useState<string>(""); // usado no input do id do jogo no modal
-  // const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
-    // // Modais
-    // const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>(
-    //   { open: false }
-    // );
-    // const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: string }>({ open: false });
-    // const [joinOrCreateModal, setJoinOrCreateModal] = useState(true);
-    // // Nomes dos jogadores
-    // const gameId = useRef<string | null>(null); //são refs pois não renderizam, é tipo uma variavel comum msm
-    // const playerName = useRef<string | null>(null);
-     // const [turn, setTurn] = useState<PieceColor>("white");
-      // const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
-      // const [highlights, setHighlights] = useState<Position[]>([]);
-      // const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
-        // const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
-  //   const [darkMode, setDarkMode] = useState(true);
-  */}
-
-type UserContextType = {
+interface UserContextType {
   darkMode: boolean;
   setDarkMode: (value: boolean) => void;
 
- gameId: string | null;
- setGameId: (id: string | null) => void;
+  gameID: string | null;
+  setGameID: (id: string) => void;
 
   highlights: Position[];
   setHighlights: (positions: Position[]) => void;
@@ -43,11 +20,8 @@ type UserContextType = {
   promotionModal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect };
   setPromotionModal: (modal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }) => void;
 
-  endGameModal: { open: boolean; winner?: string };
-  setEndGameModal: (modal: { open: boolean; winner?: string }) => void;
-
-  joinOrCreateModal: boolean;
-  setJoinOrCreateModal: (value: boolean) => void;
+  endGameModal: { open: boolean; winner?: IHandleGameOver };
+  setEndGameModal: (modal: { open: boolean; winner?: IHandleGameOver }) => void;
 
   inputPlayerName: string;
   setInputPlayerName: (name: string) => void;
@@ -55,8 +29,8 @@ type UserContextType = {
   JoinInputPlayerName: string;
   setJoinInputPlayerName: (name: string) => void;
 
-  inputGameId: string;
-  setInputGameId: (id: string) => void;
+  inputGameID: string;
+  setInputGameID: (id: string) => void;
 
   turn:PieceColor;
   setTurn:(color:PieceColor) => void;
@@ -67,9 +41,17 @@ type UserContextType = {
   moveInfo: string|null;
   setMoveInfo: (info:string) => void;
 
+  playerID: string|null;
+  setPlayerID: (id:string) => void;
+
+  gameStatus: string|null;
+  setGameStatus: (status:string) => void;
+
   // ...existing code...
 deadPieces: { white: Piece[]; black: Piece[] };
 setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
+
+  resetSessionStates: () => void; // Função para limpar os estados da sessão
 // ...existing code...
 };
 
@@ -77,38 +59,60 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 function UserProvider({ children }: { children: React.ReactNode }) {
   const [darkMode, setDarkMode] = useState(true);
-  const [gameId, setGameId] = useState<string | null>(null);
+  const [gameID, setGameID] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<Position[]>([]);
   const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
   const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
   const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>({ open: false });
-  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: string }>({ open: false });
-  const [joinOrCreateModal, setJoinOrCreateModal] = useState(true);
+  const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: IHandleGameOver }>({ open: false });
   const [inputPlayerName, setInputPlayerName] = useState<string>("");
   const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>("");
-  const [inputGameId, setInputGameId] = useState<string>("");
+  const [inputGameID, setInputGameID] = useState<string>("");
   const [turn, setTurn] = useState<PieceColor>("white");
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
   const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
+  const [playerID, setPlayerID] = useState<string|null>(null);
+  const [gameStatus, setGameStatus] = useState<string|null>(null);
+
+  // Função para resetar os estados relevantes da sessão
+  const resetSessionStates = () => {
+    setGameID(null);
+    setHighlights([]);
+    setCaptureHighlights([]);
+    setPlayerColor(null);
+    setPromotionModal({ open: false });
+    setEndGameModal({ open: false });
+    setInputPlayerName("");
+    setJoinInputPlayerName("");
+    setInputGameID("");
+    setTurn("white");
+    setPlayerName(null);
+    setMoveInfo("Clique em uma peça para mover");
+    setDeadPieces({ white: [], black: [] });
+    setPlayerID(null);
+    setGameStatus(null);
+  };
 
   return (
     <UserContext.Provider value={{
       darkMode, setDarkMode,
-      gameId, setGameId,
+      gameID, setGameID,
       highlights, setHighlights,
       captureHighlights, setCaptureHighlights,
       playerColor, setPlayerColor,
       promotionModal, setPromotionModal,
       endGameModal, setEndGameModal,
-      joinOrCreateModal, setJoinOrCreateModal,
       inputPlayerName, setInputPlayerName,
       JoinInputPlayerName, setJoinInputPlayerName,
-      inputGameId, setInputGameId,
+      inputGameID, setInputGameID,
       turn, setTurn,
       playerName, setPlayerName,
       moveInfo, setMoveInfo,
-      deadPieces, setDeadPieces
+      deadPieces, setDeadPieces,
+      playerID, setPlayerID,
+      gameStatus, setGameStatus,
+      resetSessionStates, // Exponha a nova função
     }}>
       {children}
     </UserContext.Provider>
