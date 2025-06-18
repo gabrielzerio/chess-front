@@ -1,5 +1,5 @@
 import { createContext, useState, useContext } from 'react';
-import type { IHandleGameOver, Piece, PieceColor, Position } from './types/types';
+import type { GameStatus, IHandleGameOver, Piece, PieceColor, Position } from './types/types';
 
 interface UserContextType {
   darkMode: boolean;
@@ -44,12 +44,15 @@ interface UserContextType {
   playerID: string|null;
   setPlayerID: (id:string) => void;
 
-  gameStatus: string|null;
-  setGameStatus: (status:string) => void;
+  gameStatus: GameStatus|null;
+  setGameStatus: (status:GameStatus) => void;
 
   // ...existing code...
 deadPieces: { white: Piece[]; black: Piece[] };
 setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
+
+board: (Piece | null)[][];
+setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>;
 
   resetSessionStates: () => void; // Função para limpar os estados da sessão
 // ...existing code...
@@ -58,6 +61,9 @@ setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 function UserProvider({ children }: { children: React.ReactNode }) {
+  const initialBoard: (Piece | null)[][] = Array(8)
+    .fill(null)
+    .map(() => Array(8).fill(null));
   const [darkMode, setDarkMode] = useState(true);
   const [gameID, setGameID] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<Position[]>([]);
@@ -73,7 +79,8 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
   const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
   const [playerID, setPlayerID] = useState<string|null>(null);
-  const [gameStatus, setGameStatus] = useState<string|null>(null);
+  const [gameStatus, setGameStatus] = useState<GameStatus|null>(null);
+  const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
 
   // Função para resetar os estados relevantes da sessão
   const resetSessionStates = () => {
@@ -113,6 +120,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
       playerID, setPlayerID,
       gameStatus, setGameStatus,
       resetSessionStates, // Exponha a nova função
+      board, setBoard
     }}>
       {children}
     </UserContext.Provider>

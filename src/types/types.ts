@@ -16,11 +16,15 @@ export interface IPlayer {
   color?:PieceColor;
 }
 
+export interface moveError{
+  message: string;
+}
+
 export interface IHandleGameOver{
-  status?:GameStatus;
   colorWinner?:PieceColor;
-  message?:string;
+  status?:GameStatus;
   playerWinner:string;
+  message?:string;
 }
 
 export type Login = {
@@ -37,5 +41,5 @@ export interface IHandleJoinedOrReconnected {
     board: Board,
     color: PieceColor,
     turn: PieceColor,
-    status: string
+    status: GameStatus
 }
