@@ -21,10 +21,10 @@ export interface moveError{
 }
 
 export interface IHandleGameOver{
-  status?:GameStatus;
   colorWinner?:PieceColor;
-  message?:string;
+  status?:GameStatus;
   playerWinner:string;
+  message?:string;
 }
 
 export type Login = {

@@ -273,7 +273,7 @@ export function Game() {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
             <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-            <p id="winnerMessage">O Vencedor foi {endGameModal.winner?.playerWinner}</p>
+            <p id="winnerMessage">O Vencedor foi {endGameModal.winner?.playerWinner} - {endGameModal.winner?.message}</p>
             <button
               className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
               onClick={() => handleLeaveAndReset()}

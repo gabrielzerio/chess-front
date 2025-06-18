@@ -19,7 +19,7 @@ export function useSocketListeners(socket: Socket) {
         setGameStatus,
         setEndGameModal,
         darkMode,
-        setBoard
+        setBoard,
     } = useUser();
     const navigate = useNavigate()
 
@@ -118,8 +118,7 @@ export function useSocketListeners(socket: Socket) {
             }, 1000);
         }
         function handleGameOver(data: IHandleGameOver) {
-
-            setEndGameModal({ open: true, winner: data });
+            setEndGameModal({open:true, winner:data});
         }
 
         function handleMessageReconnected({ playerID: emitPlayerID, playerName: emitPlayerName }: { playerID: string, playerName: string }) {
