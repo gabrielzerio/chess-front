@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "./UserContext";
 import { verifyGameExists } from "./api";
 import type { IPlayer } from "./types/types";
+// import { socket } from "";
 
 interface IUserFunctionsContext {
     handleLeaveAndReset(): void;
@@ -10,13 +11,15 @@ interface IUserFunctionsContext {
 }
 
 const UserFunctionsContext = createContext<IUserFunctionsContext | undefined>(undefined);
-
 function FunctionsProvider({ children }: { children: ReactNode }) {
+    // const socketHandler = useSocketListeners(socket);
+
     const navigate = useNavigate();
     const context = useUser();
     
     const handleLeaveAndReset = () => {
         navigate('/'); 
+        // socketHandler.
         localStorage.clear(); 
         context.resetSessionStates();
         console.log("Sessão encerrada, navegado para home e localStorage limpo.");

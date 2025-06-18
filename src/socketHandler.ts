@@ -2,11 +2,13 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
-import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, IPlayer, Login, Piece } from "./types/types";
+import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, IPlayer, Login, moveError } from "./types/types";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+let pausedToastInterval: NodeJS.Timeout | null = null;
+let pausedToastId: string | number | null = null;
 
-export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>) {
+export function useSocketListeners(socket: Socket) {
     const {
         setPlayerColor,
         setTurn,
@@ -16,7 +18,8 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         setPlayerID,
         setGameStatus,
         setEndGameModal,
-        darkMode
+        darkMode,
+        setBoard
     } = useUser();
     const navigate = useNavigate()
 
@@ -50,6 +53,7 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
             success: false
         }
     }
+
     useEffect(() => {
         if (!getInfosToPlay().success) {
             navigate('/');
@@ -83,8 +87,9 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
             localStorage.clear();
             navigate('/');
         }
-        function handleMoveError(error: string) {
-            toast(error);
+        function handleMoveError(moveError: moveError) {
+            const { message } = moveError
+            toast(message);
         }
         if (socket.disconnected) {
             socket.connect();
@@ -92,21 +97,23 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         function handlePausedForReconnect({ disconnectedPlayerName, timeLeft }: IPausedForReconection) {
             let secondsLeft = Math.ceil(timeLeft / 1000);
             // Cria o toast e guarda o id
-            const toastId = toast.loading(
+            pausedToastId = toast.loading(
                 `O jogador ${disconnectedPlayerName} saiu, tempo restante para finalização: ${secondsLeft} segundos`,
-                { theme:darkMode ? "dark" : "light" }
+                { theme: darkMode ? "dark" : "light" }
             );
 
             // Atualiza o toast a cada segundo
-            const interval = setInterval(() => {
+            pausedToastInterval = setInterval(() => {
                 secondsLeft--;
-                if (secondsLeft > 0) {
-                    toast.update(toastId, {
+                if (secondsLeft > 0 && pausedToastId) {
+                    toast.update(pausedToastId, {
                         render: `O jogador ${disconnectedPlayerName} saiu, tempo restante para finalização: ${secondsLeft} segundos`
                     });
                 } else {
-                    clearInterval(interval);
-                    toast.dismiss(toastId);
+                    if (pausedToastInterval) clearInterval(pausedToastInterval);
+                    if (pausedToastId) toast.dismiss(pausedToastId);
+                    pausedToastInterval = null;
+                    pausedToastId = null;
                 }
             }, 1000);
         }
@@ -116,12 +123,28 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         }
 
         function handleMessageReconnected({ playerID: emitPlayerID, playerName: emitPlayerName }: { playerID: string, playerName: string }) {
+            // Limpa o toast e o intervalo se houver reconexão
+            if (pausedToastInterval) clearInterval(pausedToastInterval);
+            if (pausedToastId) toast.dismiss(pausedToastId);
+            pausedToastInterval = null;
+            pausedToastId = null;
+
             if (playerID === emitPlayerID) {
                 toast(`você reconectou`);
             } else {
                 toast(`${emitPlayerName} se reconectou`);
             }
         }
+
+        function handleJoinMessage(message: {playerName:string}){
+            const {playerName} = message;
+            toast(`o jogador ${playerName} conectou!`);
+            if (pausedToastInterval) clearInterval(pausedToastInterval);
+            if (pausedToastId) toast.dismiss(pausedToastId);
+            pausedToastInterval = null;
+            pausedToastId = null;
+        }
+
         socket.on('connect', handleConnect);
         socket.on('joinedGame', handleJoined);
         socket.on('boardUpdate', handleBoardUpdate);
@@ -134,6 +157,7 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
         socket.on('gamePausedForReconnect', handlePausedForReconnect);
         socket.on('gameOver', handleGameOver);
         socket.on('playerReconnected', handleMessageReconnected);
+        socket.on('roomJoinMessage', handleJoinMessage);
         return () => {
             socket.off("joinedGame", handleJoined);
             socket.off("connect", handleConnect);
@@ -145,7 +169,7 @@ export function useSocketListeners(socket: Socket, setBoard: React.Dispatch<Reac
             socket.off('gamePausedForReconnect', handlePausedForReconnect);
             socket.off('gameOver', handleGameOver);
             socket.off('playerReconnected', handleMessageReconnected);
-
+            socket.off('roomJoinMessage', handleJoinMessage);    
             socket.disconnect();
         }
     }, [gameID, playerID]);

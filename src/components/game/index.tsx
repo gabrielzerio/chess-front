@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PieceType, PieceColor, Piece, Position } from "../../types/types";
+import type { PieceType, PieceColor, Position } from "../../types/types";
 import { useUser } from "../../UserContext";
 import { BoardContainer } from "./board/BoardGrid";
 import { BoardPiece } from "./board/BoardPiece";
@@ -27,11 +27,7 @@ export function Game() {
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
     Array(8).fill(null).map(() => Array(8).fill(null))
   );
-  const initialBoard: (Piece | null)[][] = Array(8)
-    .fill(null)
-    .map(() => Array(8).fill(null));
 
-  const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
   const [selected, setSelected] = useState<Position | null>(null);
 
   const {
@@ -49,6 +45,8 @@ export function Game() {
     captureHighlights,
     highlights,
     setMoveInfo,
+    board,
+    // setBoard
   } = useUser();
 
   const { handleLeaveAndReset } = useUserFunctions();
@@ -59,7 +57,7 @@ export function Game() {
     new Audio("/sounds/gameover.mp3").play();
   }, [endGameModal.open]);
 
-
+  useSocketListeners(socket);
 
   // function handleJoined({ board, color, turn, status }: { board: Board, color: PieceColor, turn: PieceColor, status: string }) {
   //   setBoard(board);
@@ -77,7 +75,6 @@ export function Game() {
   // }
 
 
-  useSocketListeners(socket, setBoard);
 
   // Utilitário: remove destaques
   const removeHighlight = () => {
@@ -116,13 +113,11 @@ export function Game() {
     } else {
       setSelected({ row, col });
       // NOVO: buscar movimentos possíveis do back-end
-      console.log("cor do jgoador atual", playerColor)
       if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
 
         socket.emit('requestPossibleMoves', { from: { row, col } }, (response: IHightlights) => { //utilização de callback
           setHighlights(response.normalMoves);
           setCaptureHighlights(response.captureMoves);
-          console.log(response)
         })
 
       } else {
@@ -139,7 +134,6 @@ export function Game() {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    console.log('mandsadasjasejaesjeas');
     socket?.emit('makeMove', { from, to, promotionType, playerName: playerName });
   }
 
@@ -164,8 +158,6 @@ export function Game() {
     if ((window as any).handlePromotion) (window as any).handlePromotion(type);
   };
 
-
-
   return (
 
     <div className="flex flex-col lg:flex-row gap-6 items-center md:justify-center w-full h-screen sm:h-full sm:px-2 py-4 bg-gray-100 dark:bg-gray-900 font-sans text-neutral-900 dark:text-neutral-100">
@@ -184,18 +176,20 @@ export function Game() {
         <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
           <GameHeader
           />
-
+        
           <div>
             <div id="board-wrapper" className="flex">
               {/* Board */}
+              
               <BoardContainer>
                 {board.map((rowArr, row) =>
+                
                   rowArr.map((piece, col) => {
                     const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
                     const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-
+                    
                     return <BoardPiece
-
+                      key={`${row}-${col}`}
                       row={row}
                       col={col}
                       boardRefs={boardRefs}
@@ -227,7 +221,7 @@ export function Game() {
                   })
                 )}
               </BoardContainer>
-
+              
             </div>
             {/* Y Coordinates */}
 
@@ -240,7 +234,7 @@ export function Game() {
           </div>
 
           {/* Info Panel */}
-          <div className="info-panel text-center mt-2">
+          <div className="text-center mt-2">
             <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
           </div>
         </div>
