@@ -12,9 +12,11 @@ export const createGame = async(playerName:string):Promise<IPlayer> => {
     return data;
 }
 
-export const joinGame = async(player:Omit<IPlayer, "playerID">):Promise<IPlayer> => {
-    const {data} = await api.post<IPlayer>("/joinGame", {playerName:player.playerName, gameID:player.gameID});
-    return data;
+export const joinGame = async(player: Omit<IPlayer, "playerID">): Promise<IPlayer> => {
+  const { data } = await api.post<IPlayer>(`/games/${player.gameID}`,
+    { playerName: player.playerName }
+  );
+  return data;
 }
 
 export const verifyGameExists = async(player:IPlayer):Promise<string> => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PieceType, PieceColor, Position } from "../../types/types";
+import { useParams } from "react-router-dom";
 import { useUser } from "../../UserContext";
 import { BoardContainer } from "./board/BoardGrid";
 import { BoardPiece } from "./board/BoardPiece";
@@ -24,6 +25,7 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
 };
 
 export function Game() {
+  const { roomId } = useParams<{ roomId: string }>();
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
     Array(8).fill(null).map(() => Array(8).fill(null))
   );
@@ -33,6 +35,7 @@ export function Game() {
   const {
     // darkMode,
     // setDarkMode,
+    setGameID,
     setHighlights,
     setCaptureHighlights,
     playerColor,
@@ -51,6 +54,11 @@ export function Game() {
 
   const { handleLeaveAndReset } = useUserFunctions();
 
+  useEffect(() => {
+    if (roomId) {
+      setGameID(roomId);
+    }
+  }, [roomId, setGameID]);
 
   useEffect(() => {
     if (!endGameModal.open) return;

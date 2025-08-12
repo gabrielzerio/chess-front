@@ -41,7 +41,7 @@ export function MenuInicio() {
     contexto.setGameID(playerInfos.gameID);
     contexto.setPlayerID(playerInfos.playerID);
     // Ao criar ou entrar em um jogo:
-    navigate("/game", { state: { skipResume: true } });
+    navigate(`games/${playerInfos.gameID}`, { state: { skipResume: true } });
   }
 
   async function handleJoinGame() {
@@ -58,7 +58,7 @@ export function MenuInicio() {
     contexto.setPlayerName(contexto.JoinInputPlayerName);
     contexto.setGameID(playerInfos.gameID);
     contexto.setPlayerID(playerInfos.playerID);
-    navigate("/game", { state: { skipResume: true } });
+    navigate(`games/${playerInfos.gameID}`, { state: { skipResume: true } });
 
   }
 

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
 import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, IPlayer, Login, moveError } from "./types/types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 let pausedToastInterval: NodeJS.Timeout | null = null;
 let pausedToastId: string | number | null = null;
@@ -22,6 +22,7 @@ export function useSocketListeners(socket: Socket) {
         setBoard,
     } = useUser();
     const navigate = useNavigate()
+    const { roomId } = useParams<{ roomId: string }>();
 
     function getInfosToPlay(): Login {
         const resolvedPlayerID: string | null = playerID || null;
@@ -30,19 +31,18 @@ export function useSocketListeners(socket: Socket) {
         if (!resolvedPlayerID || !resolvedGameID) {
             // If not in context, try localStorage
             const lsPlayerID = localStorage.getItem('playerID');
-            const lsGameID = localStorage.getItem('gameID');
+            
 
-            if (lsPlayerID && lsGameID) {
+            if (lsPlayerID && roomId) {
                 return {
                     playerID: lsPlayerID,
-                    gameID: lsGameID,
+                    gameID: roomId,
                     success: true
                 }
             }
         }
         else {
             localStorage.setItem('playerID', resolvedPlayerID);
-            localStorage.setItem('gameID', resolvedGameID);
             return {
                 playerID: resolvedPlayerID,
                 gameID: resolvedGameID,

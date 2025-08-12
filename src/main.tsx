@@ -16,7 +16,7 @@ const router = createBrowserRouter([
       </FunctionsProvider>
     )
   }, {
-    path: "/game",
+    path: "/games/:roomId",
     element: (
       <FunctionsProvider>
         <GameGuard>
