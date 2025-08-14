@@ -2,49 +2,49 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
-import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, IPlayer, Login, moveError } from "./types/types";
+import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, Login, moveError } from "./types/types";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useUserFunctions } from "./UserFunctionsContext";
 let pausedToastInterval: NodeJS.Timeout | null = null;
 let pausedToastId: string | number | null = null;
 
 export function useSocketListeners(socket: Socket) {
     const {
-        setPlayerColor,
         setTurn,
-        gameID,
+        player,
         setGameID,
-        playerID,
-        setPlayerID,
         setGameStatus,
         setEndGameModal,
         darkMode,
         setBoard,
+        updatePlayerField,
     } = useUser();
     const navigate = useNavigate()
+    const userFunctions = useUserFunctions();
     const { roomId } = useParams<{ roomId: string }>();
 
     function getInfosToPlay(): Login {
-        const resolvedPlayerID: string | null = playerID || null;
-        const resolvedGameID: string | null = gameID || null;
+        const resolvedPlayerID: string | null = player.playerId || null;
+        const resolvedGameID: string | null = roomId || null;
 
         if (!resolvedPlayerID || !resolvedGameID) {
             // If not in context, try localStorage
-            const lsPlayerID = localStorage.getItem('playerID');
-            
+            const lsPlayerID = userFunctions.getCookie('playerId');
 
             if (lsPlayerID && roomId) {
+
                 return {
-                    playerID: lsPlayerID,
+                    playerId: lsPlayerID,
                     gameID: roomId,
                     success: true
                 }
             }
         }
         else {
-            localStorage.setItem('playerID', resolvedPlayerID);
+            userFunctions.saveToCookies('playerId', resolvedPlayerID);
             return {
-                playerID: resolvedPlayerID,
+                playerId: resolvedPlayerID,
                 gameID: resolvedGameID,
                 success: true
             }
@@ -55,25 +55,28 @@ export function useSocketListeners(socket: Socket) {
     }
 
     useEffect(() => {
-        if (!getInfosToPlay().success) {
+        const infosToPlay = getInfosToPlay();
+        if (!infosToPlay.success) {
             navigate('/');
             return;
         }
-        const { playerID, gameID } = getInfosToPlay();
-        if (!playerID || !gameID) {
+        const { playerId, gameID } = infosToPlay;
+        if (!playerId || !gameID) {
             return;
         }
-        setPlayerID(playerID);
+        updatePlayerField('playerId', playerId);
         setGameID(gameID);
-        const playerInfos: IPlayer = { gameID: gameID, playerID: playerID };
-        socket.auth = playerInfos;
+        // const playerInfos: IPlayer = { playerId: playerId };
+        console.log(infosToPlay);
+        socket.auth = { playerId: infosToPlay.playerId, gameID: infosToPlay.gameID };
 
         function handleJoined({ board, color, turn, status }: IHandleJoinedOrReconnected) {
             setBoard(board);
-            setPlayerColor(color);
+            updatePlayerField('color', color);
             setTurn(turn);
             setGameStatus(status);
         }
+
         function handleConnect() {
             socket.emit('joinGame');
         }
@@ -84,7 +87,7 @@ export function useSocketListeners(socket: Socket) {
         }
         function handleJoinError(message: string) {
             toast(message);
-            localStorage.clear();
+            //LIMPAR OS COOKIES AQUI
             navigate('/');
         }
         function handleMoveError(moveError: moveError) {
@@ -118,25 +121,25 @@ export function useSocketListeners(socket: Socket) {
             }, 1000);
         }
         function handleGameOver(data: IHandleGameOver) {
-            setEndGameModal({open:true, winner:data});
+            setEndGameModal({ open: true, winner: data });
         }
 
-        function handleMessageReconnected({ playerID: emitPlayerID, playerName: emitPlayerName }: { playerID: string, playerName: string }) {
+        function handleMessageReconnected({ playerId: emitPlayerID, playerName: emitPlayerName }: { playerId: string, playerName: string }) {
             // Limpa o toast e o intervalo se houver reconexão
             if (pausedToastInterval) clearInterval(pausedToastInterval);
             if (pausedToastId) toast.dismiss(pausedToastId);
             pausedToastInterval = null;
             pausedToastId = null;
 
-            if (playerID === emitPlayerID) {
+            if (playerId === emitPlayerID) {
                 toast(`você reconectou`);
             } else {
                 toast(`${emitPlayerName} se reconectou`);
             }
         }
 
-        function handleJoinMessage(message: {playerName:string}){
-            const {playerName} = message;
+        function handleJoinMessage(message: { playerName: string }) {
+            const { playerName } = message;
             toast(`o jogador ${playerName} conectou!`);
             if (pausedToastInterval) clearInterval(pausedToastInterval);
             if (pausedToastId) toast.dismiss(pausedToastId);
@@ -168,9 +171,9 @@ export function useSocketListeners(socket: Socket) {
             socket.off('gamePausedForReconnect', handlePausedForReconnect);
             socket.off('gameOver', handleGameOver);
             socket.off('playerReconnected', handleMessageReconnected);
-            socket.off('roomJoinMessage', handleJoinMessage);    
+            socket.off('roomJoinMessage', handleJoinMessage);
             socket.disconnect();
         }
-    }, [gameID, playerID]);
+    }, []);
 
 }

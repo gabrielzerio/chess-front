@@ -1,12 +1,12 @@
 import { createContext, useState, useContext } from 'react';
-import type { GameStatus, IHandleGameOver, Piece, PieceColor, Position } from './types/types';
+import type { GameStatus, IHandleGameOver, IPlayer, Piece, PieceColor, Position } from './types/types';
 
 interface UserContextType {
   darkMode: boolean;
   setDarkMode: (value: boolean) => void;
 
   gameID: string | null;
-  setGameID: (id: string) => void;
+  setGameID: (id: string | null) => void;
 
   highlights: Position[];
   setHighlights: (positions: Position[]) => void;
@@ -14,8 +14,6 @@ interface UserContextType {
   captureHighlights: Position[];
   setCaptureHighlights: (positions: Position[]) => void;
 
-  playerColor: PieceColor | null;
-  setPlayerColor: (color: PieceColor | null) => void;
 
   promotionModal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect };
   setPromotionModal: (modal: { open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }) => void;
@@ -26,37 +24,30 @@ interface UserContextType {
   inputPlayerName: string;
   setInputPlayerName: (name: string) => void;
 
-  JoinInputPlayerName: string;
-  setJoinInputPlayerName: (name: string) => void;
-
   inputGameID: string;
   setInputGameID: (id: string) => void;
 
-  turn:PieceColor;
-  setTurn:(color:PieceColor) => void;
+  turn: PieceColor;
+  setTurn: (color: PieceColor) => void;
 
-  playerName: string | null;
-  setPlayerName: (name: string | null) => void;
-  
-  moveInfo: string|null;
-  setMoveInfo: (info:string) => void;
+  player: Partial<IPlayer>;
+  setPlayer: (player: Partial<IPlayer>) => void;
+  updatePlayerField: <K extends keyof IPlayer>(key: K, value: IPlayer[K]) => void;
 
-  playerID: string|null;
-  setPlayerID: (id:string) => void;
+  moveInfo: string | null;
+  setMoveInfo: (info: string) => void;
 
-  gameStatus: GameStatus|null;
-  setGameStatus: (status:GameStatus) => void;
+  gameStatus: GameStatus | null;
+  setGameStatus: (status: GameStatus | null) => void;
 
-  // ...existing code...
-deadPieces: { white: Piece[]; black: Piece[] };
-setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
+  deadPieces: { white: Piece[]; black: Piece[] };
+  setDeadPieces: (pieces: { white: Piece[]; black: Piece[] }) => void;
 
-board: (Piece | null)[][];
-setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>;
+  board: (Piece | null)[][];
+  setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>;
 
-  resetSessionStates: () => void; // Função para limpar os estados da sessão
-// ...existing code...
-};
+  resetSessionStates: () => void;
+}
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
@@ -68,38 +59,36 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [gameID, setGameID] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<Position[]>([]);
   const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
-  const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
   const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>({ open: false });
   const [endGameModal, setEndGameModal] = useState<{ open: boolean; winner?: IHandleGameOver }>({ open: false });
   const [inputPlayerName, setInputPlayerName] = useState<string>("");
-  const [JoinInputPlayerName, setJoinInputPlayerName] = useState<string>("");
   const [inputGameID, setInputGameID] = useState<string>("");
   const [turn, setTurn] = useState<PieceColor>("white");
-  const [playerName, setPlayerName] = useState<string | null>(null);
-  const [moveInfo, setMoveInfo] = useState("Clique em uma peça para mover");
+  const [moveInfo, setMoveInfo] = useState<string | null>("Clique em uma peça para mover");
   const [deadPieces, setDeadPieces] = useState<{ white: Piece[]; black: Piece[] }>({ white: [], black: [] });
-  const [playerID, setPlayerID] = useState<string|null>(null);
-  const [gameStatus, setGameStatus] = useState<GameStatus|null>(null);
+  const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
+  const [player, setPlayer] = useState<Partial<IPlayer>>({});
 
   // Função para resetar os estados relevantes da sessão
   const resetSessionStates = () => {
     setGameID(null);
     setHighlights([]);
     setCaptureHighlights([]);
-    setPlayerColor(null);
     setPromotionModal({ open: false });
     setEndGameModal({ open: false });
     setInputPlayerName("");
-    setJoinInputPlayerName("");
     setInputGameID("");
     setTurn("white");
-    setPlayerName(null);
     setMoveInfo("Clique em uma peça para mover");
     setDeadPieces({ white: [], black: [] });
-    setPlayerID(null);
     setGameStatus(null);
+    setPlayer({});
   };
+
+  function updatePlayerField<K extends keyof IPlayer>(key: K, value: IPlayer[K]) {
+    setPlayer(prev => ({ ...prev, [key]: value }));
+  }
 
   return (
     <UserContext.Provider value={{
@@ -107,25 +96,23 @@ function UserProvider({ children }: { children: React.ReactNode }) {
       gameID, setGameID,
       highlights, setHighlights,
       captureHighlights, setCaptureHighlights,
-      playerColor, setPlayerColor,
       promotionModal, setPromotionModal,
       endGameModal, setEndGameModal,
       inputPlayerName, setInputPlayerName,
-      JoinInputPlayerName, setJoinInputPlayerName,
       inputGameID, setInputGameID,
       turn, setTurn,
-      playerName, setPlayerName,
       moveInfo, setMoveInfo,
       deadPieces, setDeadPieces,
-      playerID, setPlayerID,
       gameStatus, setGameStatus,
-      resetSessionStates, // Exponha a nova função
-      board, setBoard
+      resetSessionStates,
+      board, setBoard,
+      player, setPlayer,
+      updatePlayerField,
     }}>
       {children}
     </UserContext.Provider>
   );
-  
+
 }
 
 export { UserProvider, UserContext };

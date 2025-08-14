@@ -36,14 +36,13 @@ export function Game() {
     // darkMode,
     // setDarkMode,
     setGameID,
+    player,
     setHighlights,
     setCaptureHighlights,
-    playerColor,
     promotionModal,
     setPromotionModal,
     endGameModal,
     turn,
-    playerName,
     moveInfo,
     captureHighlights,
     highlights,
@@ -94,13 +93,13 @@ export function Game() {
   // Clique no tabuleiro
   const handleSquareClick = async (position: Position) => {
     const { row, col } = position;
-    if (playerColor && turn !== playerColor) {
+    if (player.color && turn !== player.color) {
       setMoveInfo("Aguarde sua vez.");
       return;
     }
     setMoveInfo(`Clicou em ${String.fromCharCode(65 + col)}${8 - row}`);
     if (selected && (selected.row !== row || selected.col !== col)) {
-      if (playerColor && turn === playerColor) {
+      if (player.color && turn === player.color) {
         const piece = board[selected.row][selected.col];
         // Verifica se é um peão chegando na última linha
         if (
@@ -121,7 +120,7 @@ export function Game() {
     } else {
       setSelected({ row, col });
       // NOVO: buscar movimentos possíveis do back-end
-      if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
+      if (board[row][col] && (!player.color || board[row][col]?.color === player.color)) {
 
         socket.emit('requestPossibleMoves', { from: { row, col } }, (response: IHightlights) => { //utilização de callback
           setHighlights(response.normalMoves);
@@ -138,11 +137,11 @@ export function Game() {
 
   // Função para enviar movimento ao servidor (corrigida)
   function sendMove(from: Position, to: Position, promotionType?: PieceType) {
-    if (!playerColor) {
+    if (!player.color) {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    socket?.emit('makeMove', { from, to, promotionType, playerName: playerName });
+    socket?.emit('makeMove', { from, to, promotionType, playerName: player.playerName });
   }
 
   // Modal de promoção

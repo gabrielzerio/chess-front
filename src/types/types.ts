@@ -11,8 +11,8 @@ export type Board = (Piece | null)[][];
 
 export interface IPlayer {
   playerName?:string;
-  playerID:string;
-  gameID:string;
+  playerId:string;
+  // gameID:string;
   color?:PieceColor;
 }
 
@@ -28,7 +28,7 @@ export interface IHandleGameOver{
 }
 
 export type Login = {
-    playerID?: string;
+    playerId?: string;
     gameID?: string;
     success: boolean;
 };
