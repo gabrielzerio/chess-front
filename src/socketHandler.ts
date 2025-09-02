@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
-import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, Login, moveError } from "./types/types";
+import type { Clock, IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, Login, moveError } from "./types/types";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useUserFunctions } from "./UserFunctionsContext";
@@ -19,6 +19,8 @@ export function useSocketListeners(socket: Socket) {
         darkMode,
         setBoard,
         updatePlayerField,
+        setWhiteTimer,
+        setBlackTimer,
     } = useUser();
     const navigate = useNavigate()
     const userFunctions = useUserFunctions();
@@ -36,7 +38,7 @@ export function useSocketListeners(socket: Socket) {
 
                 return {
                     playerId: lsPlayerID,
-                    gameID: roomId,
+                    gameId: roomId,
                     success: true
                 }
             }
@@ -45,7 +47,7 @@ export function useSocketListeners(socket: Socket) {
             userFunctions.saveToCookies('playerId', resolvedPlayerID);
             return {
                 playerId: resolvedPlayerID,
-                gameID: resolvedGameID,
+                gameId: resolvedGameID,
                 success: true
             }
         }
@@ -60,15 +62,15 @@ export function useSocketListeners(socket: Socket) {
             navigate('/');
             return;
         }
-        const { playerId, gameID } = infosToPlay;
-        if (!playerId || !gameID) {
+        const { playerId, gameId } = infosToPlay;
+        if (!playerId || !gameId) {
             return;
         }
         updatePlayerField('playerId', playerId);
-        setGameID(gameID);
+        setGameID(gameId);
         // const playerInfos: IPlayer = { playerId: playerId };
         console.log(infosToPlay);
-        socket.auth = { playerId: infosToPlay.playerId, gameID: infosToPlay.gameID };
+        socket.auth = { playerId: infosToPlay.playerId, gameId: infosToPlay.gameId };
 
         function handleJoined({ board, color, turn, status }: IHandleJoinedOrReconnected) {
             setBoard(board);
@@ -147,6 +149,11 @@ export function useSocketListeners(socket: Socket) {
             pausedToastId = null;
         }
 
+        function handleTimer(timers: { white: number, black: number }) {
+            setBlackTimer(timers.black);
+            setWhiteTimer(timers.white);
+        }
+
         socket.on('connect', handleConnect);
         socket.on('joinedGame', handleJoined);
         socket.on('boardUpdate', handleBoardUpdate);
@@ -160,6 +167,7 @@ export function useSocketListeners(socket: Socket) {
         socket.on('gameOver', handleGameOver);
         socket.on('playerReconnected', handleMessageReconnected);
         socket.on('roomJoinMessage', handleJoinMessage);
+        socket.on('updateTimer', handleTimer);
         return () => {
             socket.off("joinedGame", handleJoined);
             socket.off("connect", handleConnect);
@@ -172,6 +180,7 @@ export function useSocketListeners(socket: Socket) {
             socket.off('gameOver', handleGameOver);
             socket.off('playerReconnected', handleMessageReconnected);
             socket.off('roomJoinMessage', handleJoinMessage);
+            socket.off("updateTimer", handleTimer);
             socket.disconnect();
         }
     }, []);

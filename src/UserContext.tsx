@@ -5,7 +5,7 @@ interface UserContextType {
   darkMode: boolean;
   setDarkMode: (value: boolean) => void;
 
-  gameID: string | null;
+  gameId: string | null;
   setGameID: (id: string | null) => void;
 
   highlights: Position[];
@@ -46,6 +46,12 @@ interface UserContextType {
   board: (Piece | null)[][];
   setBoard: React.Dispatch<React.SetStateAction<(Piece | null)[][]>>;
 
+  whiteTimer: number;
+  blackTimer: number;
+
+  setWhiteTimer: (whiteTimer: number) => void;
+  setBlackTimer: (blackTimer: number) => void;
+
   resetSessionStates: () => void;
 }
 
@@ -56,7 +62,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
     .fill(null)
     .map(() => Array(8).fill(null));
   const [darkMode, setDarkMode] = useState(true);
-  const [gameID, setGameID] = useState<string | null>(null);
+  const [gameId, setGameID] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<Position[]>([]);
   const [captureHighlights, setCaptureHighlights] = useState<Position[]>([]);
   const [promotionModal, setPromotionModal] = useState<{ open: boolean; position?: Position; color?: PieceColor; squareRect?: DOMRect }>({ open: false });
@@ -69,7 +75,8 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
   const [board, setBoard] = useState<(Piece | null)[][]>(initialBoard);
   const [player, setPlayer] = useState<Partial<IPlayer>>({});
-
+  const [whiteTimer, setWhiteTimer] = useState(900000);
+  const [blackTimer, setBlackTimer] = useState(900000);
   // Função para resetar os estados relevantes da sessão
   const resetSessionStates = () => {
     setGameID(null);
@@ -84,6 +91,8 @@ function UserProvider({ children }: { children: React.ReactNode }) {
     setDeadPieces({ white: [], black: [] });
     setGameStatus(null);
     setPlayer({});
+    setWhiteTimer(900000);
+    setBlackTimer(900000);
   };
 
   function updatePlayerField<K extends keyof IPlayer>(key: K, value: IPlayer[K]) {
@@ -93,7 +102,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   return (
     <UserContext.Provider value={{
       darkMode, setDarkMode,
-      gameID, setGameID,
+      gameId, setGameID,
       highlights, setHighlights,
       captureHighlights, setCaptureHighlights,
       promotionModal, setPromotionModal,
@@ -108,6 +117,8 @@ function UserProvider({ children }: { children: React.ReactNode }) {
       board, setBoard,
       player, setPlayer,
       updatePlayerField,
+      whiteTimer, blackTimer,
+      setWhiteTimer, setBlackTimer
     }}>
       {children}
     </UserContext.Provider>

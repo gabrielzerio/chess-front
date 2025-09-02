@@ -11,7 +11,7 @@ export function GameHeader() {
 
       <DivGameId />
       <div id="turn-info" className="p-5 text-lg text-center self-center rounded-lg grow font-medium">
-        {contexto.gameStatus ==='waiting' ? 'aguarde o adversario' : contexto.turn === contexto.playerColor ? 'sua vez' : 'vez do jogador adversario'}
+        {contexto.gameStatus ==='waiting' ? 'aguarde o adversario' : contexto.turn === contexto.player.color ? 'sua vez' : 'vez do jogador adversario'}
       </div>
       <button
         onClick={() => handleLeaveAndReset()}

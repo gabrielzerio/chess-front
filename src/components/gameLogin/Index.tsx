@@ -3,7 +3,7 @@
 // import type { UserContextType } from "./types/ContextType";
 
 import { useNavigate } from "react-router-dom";
-import { createGame, joinGame, playerRegister } from "../../api";
+import { createGame, getPlayer, joinGame, playerRegister } from "../../api";
 import { useUser } from "../../UserContext";
 import { useEffect, useState } from "react";
 import { useUserFunctions } from "../../UserFunctionsContext";
@@ -59,17 +59,31 @@ export function MenuInicio() {
   }
 
   async function handlePlayerRegister(): Promise<string> {
-    const playerInfos = await playerRegister(playerName, playerId != null ? playerId : '');
+    if (playerId) {
+      try {
+        const playerExists = await getPlayer(playerId);
+        if (playerExists) {
+          return playerExists.playerId;
+        }
+      } catch (error: any) {
+        if (error.response && error.response.status === 401) {
+          // Jogador não existe, continua para registrar novo
+        } else {
+          // Outros erros, trate como quiser
+          throw error;
+        }
+      }
+    }
+    // Se não existe ou deu 401, registra novo jogador
+    const playerInfos = await playerRegister(playerName);
     return playerInfos.playerId;
   }
 
   async function handleJoinGame(gameId: string, player: IPlayer): Promise<boolean> {
     if (!gameId) return false;
-
     const playerInfos = await joinGame(player, gameId);
     contexto.setPlayer(playerInfos);
     return true;
-    // navigate(`games/${contexto.gameID}`, { state: { skipResume: true } });
   }
 
 
@@ -82,23 +96,24 @@ export function MenuInicio() {
       const playerId = await handlePlayerRegister();
       if (new_game) {
         gameId = await createGame(playerId);
-        contexto.gameID = gameId;
+        contexto.gameId = gameId;
       } else {
         gameId = contexto.inputGameID
-        contexto.gameID = gameId
+        contexto.gameId = gameId
       }
 
       const player: IPlayer = { playerId: playerId };
 
       const succes = await handleJoinGame(gameId, player);
+      // console.log('avaicou')
 
-      // if (!contexto.gameID) return;
+      // if (!contexto.gameId) return;
       if (succes) {
         saveToCookies("playerId", playerId);
-        navigate(`games/${contexto.gameID}`, { state: { skipResume: true } });
+        navigate(`games/${contexto.gameId}`, { state: { skipResume: true } });
       }
-    } catch (error: unknown) {
-      if (error instanceof Response) {
+    } catch (error: any) {
+      if (error.response && error.response.status === 401) {
         resetPlayerId();
       }
     }

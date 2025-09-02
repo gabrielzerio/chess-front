@@ -8,27 +8,35 @@ const api = axios.create({
 })
 
 type GameId = {
-  gameID: string;
+  gameId: string;
 }
 
-export const playerRegister = async (playerName: string, playerId: string): Promise<IPlayer> => {
-  const { data } = await api.post<IPlayer>(`/playerRegister/?playerName=${playerName}&playerId=${playerId}`);
+export const getPlayer = async (playerId: string): Promise<IPlayer | null> => {
+  const {data} =  await api.get<IPlayer>(`/getPlayer?playerId=${playerId}`);
+  if(data){
+    return data;
+  }
+  return null;
+}
+
+export const playerRegister = async (playerName: string): Promise<IPlayer> => {
+  const { data } = await api.post<IPlayer>(`/playerRegister/?playerName=${playerName}`);
   return data;
 }
 
 export const createGame = async (playerId: string): Promise<string> => {
-  const { data } = await api.post<GameId>("/createGame", { playerId: playerId });
-  return data.gameID;
+  const { data } = await api.post<GameId>("/games/createGame", { playerId: playerId });
+  return data.gameId;
 }
 
-export const joinGame = async (player: IPlayer, gameID: string): Promise<IPlayer> => {
-  const { data } = await api.post<IPlayer>(`/games/join?gameId=${gameID}`,
+export const joinGame = async (player: IPlayer, gameId: string): Promise<IPlayer> => {
+  const { data } = await api.post<IPlayer>(`/games/join?gameId=${gameId}`,
     { playerId: player.playerId }
   );
   return data;
 }
 
 export const verifyGameExists = async (player: IPlayer, roomId: string): Promise<string> => {
-  const { data } = await api.post<AxiosHeaders>(`/gameExists/${roomId}`, { playerId: player.playerId, gameID: roomId });
+  const { data } = await api.post<AxiosHeaders>(`/gameExists/${roomId}`, { playerId: player.playerId, gameId: roomId });
   return data.status;
 }

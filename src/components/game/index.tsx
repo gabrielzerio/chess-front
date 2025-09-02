@@ -10,6 +10,7 @@ import { useSocketListeners } from "../../socketHandler";
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import { useUserFunctions } from "../../UserFunctionsContext";
+import { ChessClock } from "./ChessClock";
 interface IHightlights {
   normalMoves: Position[];
   captureMoves: Position[];
@@ -48,6 +49,8 @@ export function Game() {
     highlights,
     setMoveInfo,
     board,
+    whiteTimer,
+    blackTimer,
     // setBoard
   } = useUser();
 
@@ -98,17 +101,32 @@ export function Game() {
       return;
     }
     setMoveInfo(`Clicou em ${String.fromCharCode(65 + col)}${8 - row}`);
+
+    // Se já existe uma seleção e o clique é em outra peça do mesmo jogador, troca a seleção
+    if (
+      selected &&
+      (selected.row !== row || selected.col !== col) &&
+      board[row][col] &&
+      board[row][col]?.color === player.color
+    ) {
+      setSelected({ row, col });
+      socket.emit('requestPossibleMoves', { row, col }, (response: IHightlights) => {
+        setHighlights(response.normalMoves);
+        setCaptureHighlights(response.captureMoves);
+      });
+      return;
+    }
+
+    // Movimento normal
     if (selected && (selected.row !== row || selected.col !== col)) {
       if (player.color && turn === player.color) {
         const piece = board[selected.row][selected.col];
-        // Verifica se é um peão chegando na última linha
         if (
           piece &&
           piece.type === "pawn" &&
           ((piece.color === "white" && row === 0) ||
             (piece.color === "black" && row === 7))
         ) {
-          // Abre o modal e espera a escolha
           const promotionType = await showPromotionDialog(piece.color, { row, col });
           sendMove(selected, { row, col }, promotionType);
         } else {
@@ -119,17 +137,14 @@ export function Game() {
       removeHighlight();
     } else {
       setSelected({ row, col });
-      // NOVO: buscar movimentos possíveis do back-end
       if (board[row][col] && (!player.color || board[row][col]?.color === player.color)) {
-
-        socket.emit('requestPossibleMoves', { from: { row, col } }, (response: IHightlights) => { //utilização de callback
+        console.log({ row, col });
+        socket.emit('requestPossibleMoves', { row, col }, (response: IHightlights) => {
           setHighlights(response.normalMoves);
           setCaptureHighlights(response.captureMoves);
-        })
-
+        });
       } else {
         removeHighlight();
-
       }
     }
   };
@@ -183,18 +198,18 @@ export function Game() {
         <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
           <GameHeader
           />
-        
+
           <div>
             <div id="board-wrapper" className="flex">
               {/* Board */}
-              
+
               <BoardContainer>
                 {board.map((rowArr, row) =>
-                
+
                   rowArr.map((piece, col) => {
                     const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
                     const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-                    
+
                     return <BoardPiece
                       key={`${row}-${col}`}
                       row={row}
@@ -228,7 +243,7 @@ export function Game() {
                   })
                 )}
               </BoardContainer>
-              
+
             </div>
             {/* Y Coordinates */}
 
@@ -244,6 +259,14 @@ export function Game() {
           <div className="text-center mt-2">
             <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
           </div>
+        </div>
+        <div className="flex flex-col items-center">
+          {/* ...outros componentes... */}
+          <ChessClock
+            whiteSeconds={whiteTimer}
+            blackSeconds={blackTimer}
+            active={turn}
+          />
         </div>
       </div>
       {/* Modals */}

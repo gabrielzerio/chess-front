@@ -10,36 +10,41 @@ export type GameStatus = 'waiting' | 'playing' | 'ended' | 'checkmate' | 'paused
 export type Board = (Piece | null)[][];
 
 export interface IPlayer {
-  playerName?:string;
-  playerId:string;
-  // gameID:string;
-  color?:PieceColor;
+  playerName?: string;
+  playerId: string;
+  // gameId:string;
+  color?: PieceColor;
 }
 
-export interface moveError{
+export interface moveError {
   message: string;
 }
 
-export interface IHandleGameOver{
-  colorWinner?:PieceColor;
-  status?:GameStatus;
-  playerWinner:string;
-  message?:string;
+export interface IHandleGameOver {
+  colorWinner?: PieceColor;
+  status?: GameStatus;
+  playerWinner: string;
+  message?: string;
 }
 
+export type Clock = {
+  whiteTimer: number;
+  blackTimer: number;
+};
+
 export type Login = {
-    playerId?: string;
-    gameID?: string;
-    success: boolean;
+  playerId?: string;
+  gameId?: string;
+  success: boolean;
 };
 export type IPausedForReconection = {
-    disconnectedPlayerName: string;
-    timeLeft: number;
+  disconnectedPlayerName: string;
+  timeLeft: number;
 }
 export interface IHandleJoinedOrReconnected {
-    message?:'string'
-    board: Board,
-    color: PieceColor,
-    turn: PieceColor,
-    status: GameStatus
+  message?: 'string'
+  board: Board,
+  color: PieceColor,
+  turn: PieceColor,
+  status: GameStatus
 }
