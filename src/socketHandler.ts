@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
-import type { Clock, IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, Login, moveError } from "./types/types";
+import type { IHandleGameOver, IHandleJoinedOrReconnected, IPausedForReconection, Login, moveError } from "./types/types";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useUserFunctions } from "./UserFunctionsContext";
@@ -152,6 +152,7 @@ export function useSocketListeners(socket: Socket) {
         function handleTimer(timers: { white: number, black: number }) {
             setBlackTimer(timers.black);
             setWhiteTimer(timers.white);
+            console.log(`tempo para black: ${timers.black}, tempo para brancas: ${timers.white}`)
         }
 
         socket.on('connect', handleConnect);

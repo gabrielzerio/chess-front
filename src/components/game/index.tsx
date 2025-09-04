@@ -32,6 +32,7 @@ export function Game() {
   );
 
   const [selected, setSelected] = useState<Position | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     // darkMode,
@@ -51,6 +52,8 @@ export function Game() {
     board,
     whiteTimer,
     blackTimer,
+    setWhiteTimer,
+    setBlackTimer
     // setBoard
   } = useUser();
 
@@ -61,6 +64,31 @@ export function Game() {
       setGameID(roomId);
     }
   }, [roomId, setGameID]);
+
+  useEffect(() => {
+    // Para o timer se o jogo acabou
+    if (endGameModal.open) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      if (turn === "white" && whiteTimer > 0) {
+        setWhiteTimer(whiteTimer - 1000);
+      }
+      if (turn === "black" && blackTimer > 0) {
+        setBlackTimer(blackTimer - 1000);
+      }
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [whiteTimer, blackTimer]);
+
+
 
   useEffect(() => {
     if (!endGameModal.open) return;

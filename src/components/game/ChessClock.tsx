@@ -13,6 +13,7 @@ function formatTime(ms: number) {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+
 export function ChessClock({ whiteSeconds, blackSeconds, active }: ChessClockProps) {
     return (
         <div className="flex flex-col rounded-xl overflow-hidden shadow-lg min-w-[220px] mt-6 bg-slate-700">

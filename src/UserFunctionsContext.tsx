@@ -37,6 +37,8 @@ function FunctionsProvider({ children }: { children: ReactNode }) {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
 
+    
+
     function saveToCookies(key: string, value: string) {
         document.cookie = `${key}=${value}; max-age=7200`
     }
