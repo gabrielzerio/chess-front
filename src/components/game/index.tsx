@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PieceType, PieceColor, Position } from "../../types/types";
+import { useParams } from "react-router-dom";
 import { useUser } from "../../UserContext";
 import { BoardContainer } from "./board/BoardGrid";
 import { BoardPiece } from "./board/BoardPiece";
@@ -9,6 +10,7 @@ import { useSocketListeners } from "../../socketHandler";
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import { useUserFunctions } from "../../UserFunctionsContext";
+import { ChessClock } from "./ChessClock";
 interface IHightlights {
   normalMoves: Position[];
   captureMoves: Position[];
@@ -24,32 +26,67 @@ const pieceSymbols: Record<PieceType, Record<PieceColor, string>> = {
 };
 
 export function Game() {
+  const { roomId } = useParams<{ roomId: string }>();
   const boardRefs = useRef<(HTMLDivElement | null)[][]>(
     Array(8).fill(null).map(() => Array(8).fill(null))
   );
 
   const [selected, setSelected] = useState<Position | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     // darkMode,
     // setDarkMode,
+    setGameID,
+    player,
     setHighlights,
     setCaptureHighlights,
-    playerColor,
     promotionModal,
     setPromotionModal,
     endGameModal,
     turn,
-    playerName,
     moveInfo,
     captureHighlights,
     highlights,
     setMoveInfo,
     board,
-    // setBoard
+    whiteTimer,
+    blackTimer,
+    setWhiteTimer,
+    setBlackTimer,
+    timerActive,
   } = useUser();
 
   const { handleLeaveAndReset } = useUserFunctions();
+
+  useEffect(() => {
+    if (roomId) {
+      setGameID(roomId);
+    }
+  }, [roomId, setGameID]);
+
+  useEffect(() => {
+    if (!timerActive || endGameModal.open) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      if (turn === "white" && whiteTimer > 0) {
+        setWhiteTimer(whiteTimer - 1000);
+      }
+      if (turn === "black" && blackTimer > 0) {
+        setBlackTimer(blackTimer - 1000);
+      }
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [timerActive, turn, whiteTimer, blackTimer, endGameModal.open]);
+
 
 
   useEffect(() => {
@@ -86,22 +123,37 @@ export function Game() {
   // Clique no tabuleiro
   const handleSquareClick = async (position: Position) => {
     const { row, col } = position;
-    if (playerColor && turn !== playerColor) {
+    if (player.color && turn !== player.color) {
       setMoveInfo("Aguarde sua vez.");
       return;
     }
     setMoveInfo(`Clicou em ${String.fromCharCode(65 + col)}${8 - row}`);
+
+    // Se já existe uma seleção e o clique é em outra peça do mesmo jogador, troca a seleção
+    if (
+      selected &&
+      (selected.row !== row || selected.col !== col) &&
+      board[row][col] &&
+      board[row][col]?.color === player.color
+    ) {
+      setSelected({ row, col });
+      socket.emit('requestPossibleMoves', { row, col }, (response: IHightlights) => {
+        setHighlights(response.normalMoves);
+        setCaptureHighlights(response.captureMoves);
+      });
+      return;
+    }
+
+    // Movimento normal
     if (selected && (selected.row !== row || selected.col !== col)) {
-      if (playerColor && turn === playerColor) {
+      if (player.color && turn === player.color) {
         const piece = board[selected.row][selected.col];
-        // Verifica se é um peão chegando na última linha
         if (
           piece &&
           piece.type === "pawn" &&
           ((piece.color === "white" && row === 0) ||
             (piece.color === "black" && row === 7))
         ) {
-          // Abre o modal e espera a escolha
           const promotionType = await showPromotionDialog(piece.color, { row, col });
           sendMove(selected, { row, col }, promotionType);
         } else {
@@ -112,17 +164,14 @@ export function Game() {
       removeHighlight();
     } else {
       setSelected({ row, col });
-      // NOVO: buscar movimentos possíveis do back-end
-      if (board[row][col] && (!playerColor || board[row][col]?.color === playerColor)) {
-
-        socket.emit('requestPossibleMoves', { from: { row, col } }, (response: IHightlights) => { //utilização de callback
+      if (board[row][col] && (!player.color || board[row][col]?.color === player.color)) {
+        console.log({ row, col });
+        socket.emit('requestPossibleMoves', { row, col }, (response: IHightlights) => {
           setHighlights(response.normalMoves);
           setCaptureHighlights(response.captureMoves);
-        })
-
+        });
       } else {
         removeHighlight();
-
       }
     }
   };
@@ -130,11 +179,11 @@ export function Game() {
 
   // Função para enviar movimento ao servidor (corrigida)
   function sendMove(from: Position, to: Position, promotionType?: PieceType) {
-    if (!playerColor) {
+    if (!player.color) {
       setMoveInfo("Você não está em uma partida ativa.");
       return;
     }
-    socket?.emit('makeMove', { from, to, promotionType, playerName: playerName });
+    socket?.emit('makeMove', { from, to, promotionType, playerName: player.playerName });
   }
 
   // Modal de promoção
@@ -176,18 +225,18 @@ export function Game() {
         <div className={`chess-container flex flex-col gap-2 sm:gap-5 w-fit ${endGameModal.open ? "blur-sm" : ""}`}>
           <GameHeader
           />
-        
+
           <div>
             <div id="board-wrapper" className="flex">
               {/* Board */}
-              
+
               <BoardContainer>
                 {board.map((rowArr, row) =>
-                
+
                   rowArr.map((piece, col) => {
                     const isHighlight = highlights.some(pos => pos.row === row && pos.col === col);
                     const isCapture = captureHighlights.some(pos => pos.row === row && pos.col === col);
-                    
+
                     return <BoardPiece
                       key={`${row}-${col}`}
                       row={row}
@@ -221,7 +270,7 @@ export function Game() {
                   })
                 )}
               </BoardContainer>
-              
+
             </div>
             {/* Y Coordinates */}
 
@@ -237,6 +286,14 @@ export function Game() {
           <div className="text-center mt-2">
             <p id="move-info" className="text-2xl h-8 mb-2">{moveInfo}</p>
           </div>
+        </div>
+        <div className="flex flex-col items-center">
+          {/* ...outros componentes... */}
+          <ChessClock
+            whiteSeconds={whiteTimer}
+            blackSeconds={blackTimer}
+            active={turn}
+          />
         </div>
       </div>
       {/* Modals */}
@@ -273,7 +330,7 @@ export function Game() {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-gradient-to-b from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-700 p-8 rounded-xl border-4 border-neutral-800 dark:border-neutral-200 shadow-xl flex flex-col gap-4 items-center">
             <h2 className="font-serif text-2xl font-bold">Fim de Jogo!</h2>
-            <p id="winnerMessage">O Vencedor foi {endGameModal.winner?.playerWinner} - {endGameModal.winner?.message}</p>
+            <p id="winnerMessage">O Vencedor foi {endGameModal.winner?.winner} - {endGameModal.winner?.message}</p>
             <button
               className="bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-neutral-900 dark:hover:bg-yellow-400"
               onClick={() => handleLeaveAndReset()}
