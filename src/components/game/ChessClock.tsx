@@ -1,5 +1,3 @@
-import React from "react";
-
 interface ChessClockProps {
     whiteSeconds: number;
     blackSeconds: number;
@@ -14,7 +12,10 @@ function formatTime(ms: number) {
 }
 
 
+// Para o timer se o jogo acabou
+
 export function ChessClock({ whiteSeconds, blackSeconds, active }: ChessClockProps) {
+    
     return (
         <div className="flex flex-col rounded-xl overflow-hidden shadow-lg min-w-[220px] mt-6 bg-slate-700">
             <div className="flex justify-between px-4 py-2 bg-slate-800 text-white text-base">

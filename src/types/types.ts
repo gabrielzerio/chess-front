@@ -21,9 +21,8 @@ export interface moveError {
 }
 
 export interface IHandleGameOver {
-  colorWinner?: PieceColor;
   status?: GameStatus;
-  playerWinner: string;
+  winner: string;
   message?: string;
 }
 

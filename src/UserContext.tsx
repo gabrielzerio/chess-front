@@ -52,6 +52,9 @@ interface UserContextType {
   setWhiteTimer: (whiteTimer: number) => void;
   setBlackTimer: (blackTimer: number) => void;
 
+  timerActive: boolean;
+  setTimerActive: (active: boolean) => void;
+
   resetSessionStates: () => void;
 }
 
@@ -77,6 +80,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
   const [player, setPlayer] = useState<Partial<IPlayer>>({});
   const [whiteTimer, setWhiteTimer] = useState(900000);
   const [blackTimer, setBlackTimer] = useState(900000);
+  const [timerActive, setTimerActive] = useState(false);
   // Função para resetar os estados relevantes da sessão
   const resetSessionStates = () => {
     setGameID(null);
@@ -93,6 +97,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
     setPlayer({});
     setWhiteTimer(900000);
     setBlackTimer(900000);
+    setTimerActive(false);
   };
 
   function updatePlayerField<K extends keyof IPlayer>(key: K, value: IPlayer[K]) {
@@ -118,7 +123,7 @@ function UserProvider({ children }: { children: React.ReactNode }) {
       player, setPlayer,
       updatePlayerField,
       whiteTimer, blackTimer,
-      setWhiteTimer, setBlackTimer
+      setWhiteTimer, setBlackTimer, timerActive, setTimerActive
     }}>
       {children}
     </UserContext.Provider>

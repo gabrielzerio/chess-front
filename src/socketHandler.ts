@@ -21,7 +21,10 @@ export function useSocketListeners(socket: Socket) {
         updatePlayerField,
         setWhiteTimer,
         setBlackTimer,
+        setTimerActive,
     } = useUser();
+
+
     const navigate = useNavigate()
     const userFunctions = useUserFunctions();
     const { roomId } = useParams<{ roomId: string }>();
@@ -31,7 +34,7 @@ export function useSocketListeners(socket: Socket) {
         const resolvedGameID: string | null = roomId || null;
 
         if (!resolvedPlayerID || !resolvedGameID) {
-            // If not in context, try localStorage
+           
             const lsPlayerID = userFunctions.getCookie('playerId');
 
             if (lsPlayerID && roomId) {
@@ -152,6 +155,7 @@ export function useSocketListeners(socket: Socket) {
         function handleTimer(timers: { white: number, black: number }) {
             setBlackTimer(timers.black);
             setWhiteTimer(timers.white);
+            setTimerActive(true);
             console.log(`tempo para black: ${timers.black}, tempo para brancas: ${timers.white}`)
         }
 

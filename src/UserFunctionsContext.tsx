@@ -16,6 +16,8 @@ interface IUserFunctionsContext {
 
 const UserFunctionsContext = createContext<IUserFunctionsContext | undefined>(undefined);
 function FunctionsProvider({ children }: { children: ReactNode }) {
+
+    
     // const socketHandler = useSocketListeners(socket);
     const { roomId } = useParams<{ roomId: string }>();
 
