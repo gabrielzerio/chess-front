@@ -20,7 +20,7 @@ export const getPlayer = async (playerId: string): Promise<IPlayer | null> => {
 }
 
 export const playerRegister = async (playerName: string): Promise<IPlayer> => {
-  const { data } = await api.post<IPlayer>(`/playerRegister/?playerName=${playerName}`);
+  const { data } = await api.post<IPlayer>("/playerRegister", {playerName});
   return data;
 }
 
